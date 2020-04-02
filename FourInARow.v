@@ -3,141 +3,52 @@
 (*        This is directly inspired by a program by John Tromp                *)
 (******************************************************************************)
 
-Require Import Int31 Ascii Array List String.
+Require Import ZArith Ascii List String Int63.
 
-Open Scope int31_scope.
+Open Scope int63_scope.
+
+Parameter array : Type -> Type.
+Parameter set : forall {T : Type}, array T -> int -> T -> array T.
+Parameter get : forall {T : Type}, array T -> int -> T.
+Parameter foldi : forall {A : Type}, (int -> A -> A) -> int -> int -> A -> A.
+
+Notation " a '.[' b ']' " := (get a b) (at level 32,
+  format " a '.[' b ] ").
+Notation " a '.[' b '<-' c ']' " := (set a b c) (at level 32,
+  format " a '.[' b  '<-'  c ] ").
+
+
+Module PArray.
+
+
+Parameter make : forall {T : Type}, int -> T -> array T.
+
+End PArray.
 
 Fixpoint init_matrix (A : Type) n nn a (v : A) m {struct n} :=
   match n with 
   | O => a
-  | S n1 => init_matrix A n1 (nn-1) (set a (nn - 1) (Array.make m v)) v m
+  | S n1 => init_matrix A n1 (nn-1) (set a (nn - 1) (PArray.make m v)) v m
   end.
-Implicit Arguments init_matrix[A].
+Arguments init_matrix[A].
 
-Definition to_nat n := Zabs_nat (to_Z n).
+Definition to_nat n := Z.to_nat (to_Z n).
 
 Definition make_matrix (A: Type) n m (v : A) :=
-  let a := Array.make n (Array.make 0 v) in
+  let a := PArray.make n (PArray.make 0 v) in 
   init_matrix (to_nat n) n a v m.
-Implicit Arguments make_matrix[A].
 
-(* Simulating 62 Arithmetic *)
+Arguments make_matrix[A].
 
-Inductive int62 := Int62(h l: int).
+(* 63 Arithmetic *)
 
-Definition one := Int62 0 1.
-Definition zero := Int62 0 0.
+Definition one := of_Z 1.
+Definition zero := of_Z 0.
 
-Definition logand (s1 s2: int62) :=
-  let (h1, l1) := s1 in
-  let (h2, l2) := s2 in Int62 (h1 land h2) (l1 land l2).
-
-Definition logor (s1 s2: int62) :=
-  let (h1, l1) := s1 in
-  let (h2, l2) := s2 in Int62 (h1 lor h2) (l1 lor l2).
-
-Definition add (s1 s2: int62) :=
-  let (h1, l1) := s1 in
-  let (h2, l2) := s2 in 
-  let h3 := h1 + h2 in
-  let l3 := l1 + l2 in
-  match l3 ?= l1 with
-  | Lt => Int62 (1 + h3) l3
-  | _  => Int62 h3 l3
-  end.
-
-Definition sub (s1 s2: int62) :=
-  let (h1, l1) := s1 in
-  let (h2, l2) := s2 in 
-  let h3 := h1 - h2 in
-  let l3 := l1 - l2 in
-  match l3 ?= l1 with
-  | Gt => Int62 (h3 - 1) l3
-  | _  => Int62 h3 l3
-  end.
-
-Definition decr (s: int62) :=
-  let (h, l) := s in
-    match l ?= 0 with
-    | Gt => Int62 h (l - 1)
-    | _  => Int62 (h - 1) (0 - 1)
-    end.
-
-Definition incr (s: int62) :=
-  let (h, l) := s in
-    let l' := l + 1 in
-    match l' ?= 0 with
-    | Gt => Int62 h l'
-    | _  => Int62 (h + 1) 0
-    end.
-
-Definition le62 (s1 s2: int62) :=
-  let (h1, l1) := s1 in
-  let (h2, l2) := s2 in 
-  match h1 ?= h2 with
-  | Gt => false
-  | Lt => true 
-  | Eq =>   match l1 ?= l2 with
-           | Gt => false
-           | Lt => true 
-           | Eq =>  true
-           end
-  end.
-
-(* shift left with n <= 31 *)
-Definition shift_leftA (s: int62) n :=
-  let (h, l) := s in
-    Int62 (addmuldiv n h l) (l << n).
-
-(* shift left *)
-Definition shift_left (s: int62) n :=
-  match n ?= 31 with
-  | Lt => shift_leftA s n
-  | _  => let (h, l) := s in Int62 (l << (n - 31)) 0
-  end.
-
-(* shift right with n <= 31 *)
-Definition shift_rightA (s: int62) n :=
-  let (h, l) := s in
-    Int62 (h >> n) (addmuldiv (31 - n) h l).
-
-(* shift right *)
-Definition shift_right (s: int62) n :=
-  match n ?= 31 with
-  | Lt => shift_rightA s n
-  | _  => let (h, l) := s in Int62 0 (h >> (n - 31))
-  end.
-
-Definition eq62 (s1 s2: int62) :=
-  let (h1, l1) := s1 in
-  let (h2, l2) := s2 in
-  match eqb l1 l2 with true => eqb h1 h2 | _ => false end.
-
-Definition is_zero (s: int62) :=
-  let (h, l) := s in
-  match eqb 0 l with true => eqb 0 h | _ => false end.
-
-Definition is_nzero (s: int62) :=
-  let (h, l) := s in
-  match eqb 0 l with true => negb (eqb 0 h) | _ => true end.
-
-Definition to_int (s : int62) :=
-  let (h,l) := s in l.
-
-Definition div62_1 (s : int62) (n : int) :=
-  let (h, l) := s in
-  let (d,r) := diveucl h n in
-  let m := head0 n in
-  let (h1,l1) := shift_left (Int62 r l) m in
-  let (d1,_) := diveucl_21 h1 l1 (n << m) in
-  Int62 d d1.
-
-Definition rem62 (s : int62) (n : int) :=
-  let (h, l) := s in
-  let (_,r) := diveucl_21 h l n in r.
-
-Definition min62 (s1 s2 : int62) :=
-  if le62 s1 s2 then s1 else s2.
+Definition decr s := s - 1.
+Definition incr s := s + 1.
+Definition is_zero s := eqb s zero.
+Definition is_nzero s := negb (eqb s zero).
 
 (* Width of the board *)
 Definition width := 7.
@@ -172,18 +83,16 @@ Definition size := width * height.
 (* Real size of the board *)
 Definition number_of_cells := width * horizontal.
 (* All the cells are set to one *)
-Definition all_set := decr (shift_left one number_of_cells).
+Definition all_set := decr (one << number_of_cells).
 (* Cells of the first column *)
-Definition first_column := decr (shift_left one height).
+Definition first_column := decr (one << height).
 (* Cells of the first column + border *)
-Definition full_first_column := decr (shift_left one horizontal).
+Definition full_first_column := decr (one << horizontal).
 (* Cells at the bottom of the board *)
-Definition bottom := div62_1 all_set (to_int (decr (shift_left one horizontal))).
-Definition hbottom := let (h,l) := bottom in h.
-Definition lbottom := let (h,l) := bottom in l.
+Definition bottom := div all_set (decr (one << horizontal)).
 
 (* Cells at the top *)
-Definition top := shift_left bottom height.
+Definition top := bottom << height.
 (* Unknown valuation *)
 Definition unknown := 0.
 (* Loss valuation *)
@@ -225,34 +134,33 @@ Definition mhash := nhash - 1.
 Definition sym_level := 10.
 
 (* Hash table because of size limitation we create a matrix *)
-Definition make_hash (u : unit) := make_matrix nhash (2 * (hprime/nhash) + 1) 0.
+Definition make_hash (u : unit) := 
+  make_matrix nhash (2 * (hprime/nhash) + 1) 0.
 
 Definition min m n := match m ?= n with Lt => m | _ => n end.
 Definition max m n := match m ?= n with Lt => n | _ => m end.
 
+
+Search int "fold".
+
 (* Score of the different cells *)
 Definition values :=
-  let t := Array.make number_of_cells 0 in 
+  let t := PArray.make number_of_cells 0 in 
   foldi (fun i t =>
     foldi (fun j t =>
       let v := 3 + min 3 i  
                  + min 3 (min i j) + min 3 j
                  + min 3 (min ((width + 1) / 2 - i) j) in
-      let t := (t.[horizontal * i + j <- v])%array in
-      let t := (t.[horizontal * (width - 1 - i) + height - 1 - j <- v])%array in
-      let t := (t.[horizontal * i + height - 1 - j <- v])%array in
-      (t.[horizontal * (width - 1 - i) + j <- v])%array)
+      let t := (t.[horizontal * i + j <- v]) in
+      let t := (t.[horizontal * (width - 1 - i) + height - 1 - j <- v]) in
+      let t := (t.[horizontal * i + height - 1 - j <- v]) in
+      (t.[horizontal * (width - 1 - i) + j <- v]))
       0 ((horizontal / 2) - 1) t)
     0 ((width + 1) / 2 - 1) t.
 
-Definition logand2 (state : int62) dir dir2 :=
-  let (h, l) := state in
-  let h1 := h land (h >> dir) in
-  let h2 := h1 land (h1 >> dir2) in
-  if h2 == 0 then
-  let l1 := l land  (addmuldiv (31 - dir) h l) in
-  let l2 := l1 land  (addmuldiv (31 - dir2) h1 l1) in
-  l2 == 0 else false.
+Definition logand2 s dir dir2 :=
+  let s1 := s land (s >> dir) in
+  let s2 := s1 land (s >> dir2) in is_zero s2.
 
 Register logand2 as Inline.
 
@@ -269,25 +177,18 @@ Definition is_won state :=
   else true.
 
 (* Get the border *)
-Definition get_border (wstate bstate : int62) :=
-  let (hw,lw) := wstate in
-  let (hb,lb) := bstate in
-  let hr := hbottom + (hw lor hb) in
-  let lr := lbottom + (lw lor lb) in
-  if lr < lbottom then Int62 (hr + 1) lr else Int62 hr lr.
-
+Definition get_border (wstate bstate : int) :=
+  bottom + (wstate lor bstate).
 
 (* Perform a move *)
-Definition  make_move move state := logor move state.
+Definition  make_move move state := move lor state.
 
 (* Get the log 2 of a number *)
-Definition get_log2 (v :int62) : int :=
-  let (h,l) := v in
-  if (h == 0) then if (l == 0) then 0 else 30 - head0 l 
-  else 61 - head0 h.
+Definition get_log2 (v : int) : int :=
+   62 - head0 v.
 
 (* List of possible moves, no move = draw *)
-Inductive moves := EmptyMove | Move (m: int62) (v: int) (l: moves).
+Inductive moves := EmptyMove | Move (m : int) (v : int) (l : moves).
 
 (* Moves are ordered by their values *)
 Fixpoint insert_fmove m (v : int) l := 
@@ -303,7 +204,7 @@ end.
 Inductive fmove := 
  | Win
  | Draw
- | Forced (_ : int62)
+ | Forced (_ : int)
  | Moves (_: moves).
 
 Definition make_moves l :=
@@ -311,12 +212,12 @@ Definition make_moves l :=
 
 Section FindMoves.
 
-Variables (wstate bstate border: int62).
+Variables (wstate bstate border: int).
 
 Fixpoint make_colums i column :=
   match i with
       O => nil 
-  | S i => column :: (make_colums i (shift_left column horizontal))
+  | S i => column :: (make_colums i (column << horizontal))
   end.
 
 Definition columns := Eval compute in make_colums nwidth first_column.
@@ -326,7 +227,7 @@ Fixpoint fmt columns res :=
   match columns with 
   | nil => res
   | column :: columns =>
-      let move := logand border column in
+      let move := border land column in
       if is_zero move then fmt columns res
       else
       if is_won (make_move move wstate) then Win
@@ -337,7 +238,7 @@ Fixpoint fms columns res :=
   match columns with 
   | nil => make_moves res
   | column :: columns =>
-      let move := logand border column in
+      let move := border land column in
       if is_zero move then fms columns res
       else
       if is_won (make_move move wstate) then Win
@@ -345,7 +246,7 @@ Fixpoint fms columns res :=
       if is_won (make_move move bstate) then 
         fmt columns (Forced move)
       else
-        let v := (values.[get_log2 move])%array in
+        let v := (values.[get_log2 move]) in
         fms columns (insert_fmove move v res)
    end.
 
@@ -368,10 +269,10 @@ Fixpoint parsei s i j wstate bstate (turn : bool) :=
     match s with
     | EmptyString => (wstate,bstate,turn)
     | String "X"%char s1 =>
-       let move := shift_left one (j * horizontal + i) in 
+       let move := one << (j * horizontal + i) in 
        parsei s1 i (j + 1) (make_move wstate move) bstate (negb turn)
     | String "O"%char s1 =>
-       let move := shift_left one (j * horizontal + i) in 
+       let move := one << (j * horizontal + i) in 
        parsei s1 i (j + 1) wstate (make_move bstate move) (negb turn)
     | String "_"%char s1 => 
        parsei s1 i (j + 1) wstate bstate turn
@@ -398,9 +299,9 @@ Fixpoint to_stringi m i j wstate bstate :=
   | None => nl
   | Some (i,j,ts) =>
     (ts ++
-   (let move := shift_left one (j * horizontal + i) in 
-    if is_nzero (logand move wstate) then "X"%string ++ (to_stringi m1 i (j + 1) wstate bstate) 
-    else if is_nzero (logand move bstate) then "O"%string ++ (to_stringi m1 i (j + 1) wstate bstate) 
+   (let move := one << (j * horizontal + i) in 
+    if is_nzero (move land wstate) then "X"%string ++ (to_stringi m1 i (j + 1) wstate bstate) 
+    else if is_nzero (move land bstate) then "O"%string ++ (to_stringi m1 i (j + 1) wstate bstate) 
     else "_"%string ++ (to_stringi m1 i (j + 1) wstate bstate)))%string
   end
   end.
@@ -426,20 +327,20 @@ Fixpoint sym_code i sres res :=
   match i with 
   | O => sres
   | S i =>
-      let sres := logor (shift_leftA sres horizontal) 
-                       (logand res full_first_column) in
-      let res := shift_rightA res horizontal in
+      let sres :=  (sres << horizontal) lor
+                       (res land full_first_column) in
+      let res := res >> horizontal in
       sym_code i sres res
   end.
     
 (* Get the unique code of a position *)
 Definition get_code wstate bstate turn height :=
-  let res := logor (match turn with true => wstate | false => bstate end) 
+  let res := (match turn with true => wstate | false => bstate end) lor
         (get_border wstate bstate) in
   if height <= sym_level
   then
      let sres := sym_code nwidth zero res in
-     min62 sres res
+     min sres res
   else res.
 
 (* Put an element in the hash-table
@@ -448,52 +349,56 @@ Definition get_code wstate bstate turn height :=
       at key + 1 : high bits = score first entry then score second entry
                    low bits = lock second entry
  *)
+
 Definition hput wstate bstate turn work score hash_table height :=
    let code := get_code wstate bstate turn height in
-   let fkey := rem62 code hprime in
+   let fkey := code \% hprime in
    let key := 2 * (fkey >> lhash) in
    let r :=  fkey land mhash in
-   let lock := to_int (shift_right code slocksize) in
-   let ht := (hash_table.[r])%array in
-   let val1 := (ht.[key])%array in
-   let val2 := (ht.[key + 1])%array in
+   let lock := (code >> slocksize) in
+   let ht := (hash_table.[r]) in
+   let val1 := (ht.[key]) in
+   let val2 := (ht.[key + 1]) in
    if orb ((val1 land lockmask) == lock) ((val1 >> locksize) <= work) then
-       let ht := (ht.[key <- (work << locksize) lor lock])%array in
+       let ht := (ht.[key <- (work << locksize) lor lock]) in
        let ht := (ht.[key + 1 <- 
-                   ((score << scorelocksize) lor (val2 land scorelockmask))])%array in
-        (hash_table.[r <- ht])%array
+                   ((score << scorelocksize) lor (val2 land scorelockmask))]) in
+        (hash_table.[r <- ht])
    else
       let ht := (ht.[key + 1 <-
         ((((val2 >> scorelocksize) << scoresize) lor score) << locksize)
-              lor lock])%array in
-        (hash_table.[r <- ht])%array.
+              lor lock]) in
+        (hash_table.[r <- ht]).
 
 (* Get an element in the hash-table *)
-Definition hget (wstate bstate : int62) (turn : bool) (hash_table : array (array int)) height := 
+Definition hget (wstate bstate : int) (turn : bool) 
+         (hash_table : array (array int)) height := 
    let code := get_code wstate bstate turn height in
-   let fkey := rem62 code hprime in
+   let fkey := code \% hprime in
    let key := 2 * (fkey >> lhash) in
    let r :=  fkey land mhash in
-   let lock := to_int (shift_right code slocksize) in
-   let ht := (hash_table.[r])%array in
-   let val1 := (ht.[key])%array in
-   let val2 := (ht.[key + 1])%array in
+   let lock := (code >> slocksize) in
+   let ht := (hash_table.[r]) in
+   let val1 := (ht.[key]) in
+   let val2 := (ht.[key + 1]) in
    if ((val1 land lockmask) == lock) then
        val2 >> scorelocksize
    else if ((val2 land lockmask) == lock) then
        (val2 >> locksize) land scoremask
    else unknown.
 
-Definition is_nempty_move m := match m with EmptyMove => false | Move _ _ _ => true end.
+Definition is_nempty_move m :=
+  match m with EmptyMove => false | Move _ _ _ => true end.
 
 (* Process result *)
-Inductive pres := PRes (s : int) (v : int62) (t : array (array int)).
+Inductive pres := PRes (s : int) (v : int) (t : array (array int)).
 
 Section Process.
 
-Variables (wstate bstate : int62) (turn : bool) (beta : int) (lvisited : int62) (height hscore :  int)
-          (alpha_beta : int62 -> int62 -> bool -> int -> int -> int62 -> array (array int) ->
-                       pres).
+Variables (wstate bstate : int) (turn : bool) (beta : int) (lvisited : int) 
+          (height hscore :  int)
+          (alpha_beta : int -> int -> bool -> int -> int -> int -> 
+                         array (array int) -> pres).
 Fixpoint process ms alpha score visited hash_table :=
   match ms with
   | EmptyMove =>
@@ -557,7 +462,8 @@ Fixpoint alpha_beta nstruct height wstate bstate turn alpha beta visited hash_ta
      match nstruct with 
      | 0%nat => PRes unknown visited hash_table
      | S nstruct =>
-     process wstate bstate turn beta visited height hscore (alpha_beta nstruct (height + 1))
+     process wstate bstate turn beta visited height hscore 
+            (alpha_beta nstruct (height + 1))
              ms alpha loss visited hash_table
      end
   end.
@@ -567,7 +473,8 @@ Definition eval_position s :=
    (wstate,bstate,turn) =>
    let (wstate,bstate) := if turn then (wstate,bstate) else (bstate,wstate) in
    let (score,_,_) :=
-     alpha_beta (1 + nheight * nwidth)%nat 0 wstate bstate turn loss win zero (make_hash tt) in
+     alpha_beta (1 + nheight * nwidth)%nat 0 wstate bstate turn loss win zero
+                (make_hash tt) in
    score
    end.
 
