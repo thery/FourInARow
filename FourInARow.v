@@ -17,7 +17,7 @@ Notation " x + y " := (add x y).
 Notation " x * y " := (mul x y).
 Notation " x / y " := (div x y).
 Notation " x <=? y " := (leb x y).
-Notation " x <? y " := (leb x y).
+Notation " x <? y " := (ltb x y).
 Notation " x ?= y " := (compare x y).
 Notation " x =? y " := (eqb x y).
 Notation " x << y " := (lsl x y) (at level 10).
@@ -25,7 +25,6 @@ Notation " x >> y " := (lsr x y) (at level 10).
 Infix "land" := land (at level 10).
 Infix "lor" := lor (at level 10).
 Infix "mod" := Uint63.mod (at level 40).
-
 
 
 (*
@@ -394,7 +393,6 @@ Definition get_code wstate bstate turn height :=
      min sres res
   else res.
 
-Check get_code.
 (* Put an element in the hash-table
     The layout of the two-entry hash-table
       at key : high bits = work first entry, low bits = lock first entry
