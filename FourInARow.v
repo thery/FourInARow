@@ -3,11 +3,30 @@
 (*        This is directly inspired by a program by John Tromp                *)
 (******************************************************************************)
 
-Require Import ssreflect ZArith Ascii List String Int63.
+From Stdlib Require Import ssreflect ZArith Ascii List String PrimInt63.
+From Stdlib Require Import PArray.
 
 Open Scope int63_scope.
 
-Require Import PArray.
+Import PrimInt63Notations.
+Import Uint63Axioms.
+
+
+Notation " x - y " := (sub x y).
+Notation " x + y " := (add x y).
+Notation " x * y " := (mul x y).
+Notation " x / y " := (div x y).
+Notation " x <=? y " := (leb x y).
+Notation " x <? y " := (leb x y).
+Notation " x ?= y " := (compare x y).
+Notation " x =? y " := (eqb x y).
+Notation " x << y " := (lsl x y) (at level 10).
+Notation " x >> y " := (lsr x y) (at level 10).
+Infix "land" := land (at level 10).
+Infix "lor" := lor (at level 10).
+Infix "mod" := Uint63.mod (at level 40).
+
+
 
 (*
 Parameter array : Type -> Type.
@@ -17,7 +36,7 @@ Parameter foldi : forall {A : Type}, (int -> A -> A) -> int -> int -> A -> A.
 *)
 
 (* Naive implementation of foldi *)
-Fixpoint nfoldi {A : Type} (f : int -> A -> A) n v r :=
+Fixpoint nfoldi {A : Type} (f : int -> A -> A) n (v : int) r :=
   if n is (S n1) then nfoldi f n1 (v - 1) (f v r) else f v r.
 Definition foldi {A : Type} (f : int -> A -> A) v1 v2 r :=
   if v1 <=? v2 then nfoldi f (Z.to_nat (to_Z (v2 - v1))) v2 r
@@ -147,13 +166,13 @@ Definition mhash := nhash - 1.
 (* Symmetry level *)
 Definition sym_level := 10.
 
-(* Hash table because of size limitation we create a matrix *)
+(* Hash table because of size limitation we crea(* Size of the board *)
+te a matrix *)
 Definition make_hash (u : unit) := 
   make_matrix nhash (2 * (hprime/nhash) + 1) 0.
 
 Definition min m n := match m ?= n with Lt => m | _ => n end.
 Definition max m n := match m ?= n with Lt => n | _ => m end.
-
 
 (* Score of the different cells *)
 Definition values :=
@@ -375,6 +394,7 @@ Definition get_code wstate bstate turn height :=
      min sres res
   else res.
 
+Check get_code.
 (* Put an element in the hash-table
     The layout of the two-entry hash-table
       at key : high bits = work first entry, low bits = lock first entry
@@ -383,6 +403,8 @@ Definition get_code wstate bstate turn height :=
  *)
 
 Definition hput wstate bstate turn work score hash_table height :=
+   if (score land 1) =? 0 then hash_table
+   else
    let code := get_code wstate bstate turn height in
    let fkey := code mod hprime in
    let key := 2 * (fkey >> lhash) in
