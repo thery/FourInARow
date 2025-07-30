@@ -6,26 +6,11 @@
 From Stdlib Require Import ssreflect ZArith Ascii List String PrimInt63.
 From Stdlib Require Import PArray.
 
-Open Scope int63_scope.
 
 Import PrimInt63Notations.
 Import Uint63Axioms.
-
-
-Notation " x - y " := (sub x y).
-Notation " x + y " := (add x y).
-Notation " x * y " := (mul x y).
-Notation " x / y " := (div x y).
-Notation " x <=? y " := (leb x y).
-Notation " x <? y " := (ltb x y).
-Notation " x ?= y " := (compare x y).
-Notation " x =? y " := (eqb x y).
-Notation " x << y " := (lsl x y) (at level 10).
-Notation " x >> y " := (lsr x y) (at level 10).
-Infix "land" := land (at level 10).
-Infix "lor" := lor (at level 10).
-Infix "mod" := Uint63.mod (at level 40).
-
+Import Uint63.
+Open Scope uint63_scope.
 
 (*
 Parameter array : Type -> Type.
@@ -79,7 +64,6 @@ Definition zero := of_Z 0.
 
 Definition decr s := s - 1.
 Definition incr s := s + 1.
-Definition is_zero s := eqb s zero.
 Definition is_nzero s := negb (eqb s zero).
 
 (* Width of the board *)
@@ -602,9 +586,10 @@ Definition ex3 := (
 Definition ex4 := ("______" ++ "______" ++ "______" ++
                    "______" ++ "______" ++ "______" ++ "______")%string.
 
+(*
 Time Eval native_compute in string_of_score (eval_position ex1).
 Time Eval native_compute in string_of_score (eval_position ex2).
 Time Eval native_compute in string_of_score (eval_position ex3).
 Time Eval native_compute in string_of_score (eval_position ex4).
 
-
+*)

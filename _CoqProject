@@ -1,1 +1,6 @@
+-R . fourInARow
+-I .
+
 FourInARow.v
+PFourInARow.v
+ssr_int.v
