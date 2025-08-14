@@ -74,6 +74,7 @@ Definition height := 6.
 Definition nheight := 6%nat.
 (* Shift for moving horizontally *)
 Definition horizontal := Eval compute in height + 1.
+Definition nhorizontal := Eval compute in (nheight + 1)%nat.
 Definition horizontal2 := Eval compute in 2 * horizontal.
 (* Shift for moving vertically *)
 Definition vertical := 1.
@@ -198,7 +199,7 @@ Definition get_border (wstate bstate : int) :=
 Definition  make_move move state := move lor state.
 
 (* Get the log 2 of a number *)
-Definition get_log2 (v : int) : int :=
+Definition log2 (v : int) : int :=
    62 - head0 v.
 
 (* List of possible moves, no move = draw *)
@@ -260,7 +261,7 @@ Fixpoint fms columns res :=
       if is_won (make_move move bstate) then 
         fmt columns (Forced move)
       else
-        let v := (values.[get_log2 move]) in
+        let v := (values.[log2 move]) in
         fms columns (insert_fmove move v res)
    end.
 
@@ -277,7 +278,7 @@ fms columns res =
       if is_won (make_move move bstate) then 
         fmt columns (Forced move)
       else
-        let v := (values.[get_log2 move]) in
+        let v := (values.[log2 move]) in
         fms columns (insert_fmove move v res)
    end.
 Proof.
@@ -439,7 +440,7 @@ Fixpoint process ms alpha score visited hash_table :=
   match ms with
   | EmptyMove =>
       let score := if (score =? losswin - hscore) then draw else score in
-      let work := get_log2 (sub visited lvisited) in
+      let work := log2 (sub visited lvisited) in
       let hash_table := hput wstate bstate turn work score hash_table height in
       PRes score (incr visited) hash_table
   | Move move _ ms1 =>
@@ -459,7 +460,7 @@ Fixpoint process ms alpha score visited hash_table :=
         if (andb (score =? draw) (is_nempty_move ms1)) then drawwin 
         else score in
       let score := if (score =? losswin - hscore) then draw else score in
-      let work := get_log2 (sub visited  lvisited) in
+      let work := log2 (sub visited  lvisited) in
       let hash_table := hput wstate bstate turn work score hash_table height in
       PRes score (incr visited) hash_table
     end.
