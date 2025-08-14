@@ -12,6 +12,25 @@ Import Uint63Axioms.
 Import Uint63.
 Open Scope uint63_scope.
 
+
+Lemma nhorizontalLwB : nhorizontal < nwB.
+Proof.
+rewrite -[nhorizontal]/(to_nat horizontal).
+by apply: to_nat_bounded.
+Qed.
+
+Lemma nwidthLwB : nwidth < nwB.
+Proof.
+rewrite -[nwidth]/(to_nat width).
+by apply: to_nat_bounded.
+Qed.
+
+Lemma nwihoLwB : nwidth * nhorizontal < nwB.
+Proof.
+apply: ltn_trans (_ : 2 ^ 6 < _); first by [].
+by rewrite nwBE Z2Nat.inj_pow.
+Qed.
+
 Lemma init_matrix_length1 (A : Type) n nn a (v : A) m : 
   nn <=? length a -> (Z.of_nat n <= φ nn)%Z ->  
   length (init_matrix n nn a v m) = length a.
@@ -541,29 +560,6 @@ Definition get_column (state : int) (i : int) :=
 Lemma get_column0 i : get_column 0 i = 0.
 Proof. by rewrite /get_column lsr0 land0. Qed.
 
-Lemma eqb_eqb (i j : int) : (i =? j) = (i == j).
-Proof.
-case: (_ =P _) => [->|]; case: eqbP; try lia.
-by move=> iEj []; apply: to_Z_inj.
-Qed.
-
-Lemma mul_0_l i : 0 * i = 0.
-Proof.
-apply: to_Z_inj.
-by rewrite mul_spec Z.mul_0_l Z.mod_0_l.
-Qed.
-
-Lemma mul_1_l i : 1 * i = i.
-Proof.
-apply: to_Z_inj.
-rewrite mul_spec Z.mul_1_l Z.mod_small //; apply: to_Z_bounded.
-Qed.
-
-Lemma add_0_l i : 0 + i = i.
-Proof.
-apply: to_Z_inj.
-by rewrite add_spec Z.add_0_l Z.mod_small //; apply: to_Z_bounded.
-Qed.
 
 Lemma bit_get_column0 s i j :  height <? j -> bit (get_column s i) j = false.
 Proof.
@@ -642,24 +638,6 @@ Definition cell (w : int) (i : nat) (j : nat) :=
 Lemma cell_0 i j : cell 0 i j = false.
 Proof. by rewrite /cell bit_0. Qed.
 
-Lemma nhorizontalLwB : nhorizontal < nwB.
-Proof.
-rewrite -[nhorizontal]/(to_nat horizontal).
-by apply: to_nat_bounded.
-Qed.
-
-Lemma nwidthLwB : nwidth < nwB.
-Proof.
-rewrite -[nwidth]/(to_nat width).
-by apply: to_nat_bounded.
-Qed.
-
-Lemma nwihoLwB : nwidth * nhorizontal < nwB.
-Proof.
-apply: ltn_trans (_ : 2 ^ 6 < _); first by [].
-by rewrite nwBE Z2Nat.inj_pow.
-Qed.
-
 Lemma cell_get_column w i j : 
   i < nwidth -> j < nhorizontal -> 
   cell w i j = bit (get_column w (of_nat i)) (of_nat j).
@@ -726,160 +704,6 @@ rewrite wf_states_width ?bit_0 // in Hb.
 by case: nlebP; rewrite // of_natK.
 Qed.
 
-Lemma big_bit_lor (P : nat -> bool) (f : nat -> int) j n : 
-  bit (\big[olor/0]_(i < n | P i) f i) j = \big[orb/false]_(i < n | P i) bit (f i) j.
-Proof.
-rewrite [in LHS]big_mkcond [in RHS]big_mkcond.
-elim: n => [|n IH]; first by rewrite !big_ord0 bit_0.
-rewrite !big_ord_recr /= lor_spec IH.
-by case: (P _); rewrite ?bit_0.
-Qed.
-
-Lemma to_nat_split x : to_nat x = (to_nat (x >> 1) * 2 + to_nat (bit x 0))%nat.
-Proof.
-rewrite to_Z_split !(Z2Nat.inj_add, Z2Nat.inj_mul) //.
-- by have := to_Z_bounded (x >> 1); lia.
-- by have := to_Z_bounded (x >> 1); lia.
-by have := to_Z_bounded (bit x 0); lia.
-Qed.
-
-Definition ndigits := to_nat digits.
-
-Lemma neqbP x y : reflect (to_nat x = to_nat y) (x =? y)%uint63.
-Proof.
-have xB := to_Z_bounded x.
-have yB := to_Z_bounded y.
-apply: (iffP idP); first by case: eqbP => [->|].
-case: eqbP => // H H1; case: H.
-by apply/Z2Nat.inj_iff; lia.
-Qed.
-
-Lemma to_nat_sum x : to_nat x = \sum_(i < ndigits) bit x (of_nat i) * 2 ^ i.
-Proof.
-have := to_nat_bounded x.
-elim: nwB x => // n IH x H.
-have [xE0|xNE0] := to_nat x =P 0%nat.
-  have -> : x = 0 by apply: to_nat_inj.
-  by rewrite big1 //= => i _; rewrite bit_0.
-have x_pos : (0 < to_nat x)%nat by case: (to_nat x) xNE0.
-rewrite to_nat_split (IH (x >> 1)); last first.
-  rewrite to_nat_lsr expn1 ltn_divLR // (leq_trans H _) //.
-  rewrite muln2 -addnn -[X in (X < _)%nat]add0n ltn_add2r.
-  case: (n) H => //.
-  by rewrite ltnS leqNgt x_pos.
-rewrite -[ndigits in RHS]/ndigits.-1.+1.
-rewrite [in RHS]big_ord_recl muln1 addnC; congr (_ + _)%nat.
-  by case: bit.
-rewrite -[ndigits in LHS]/ndigits.-1.+1.
-rewrite big_distrl /= big_ord_recr /=.
-have -> : bit (x >> 1) (of_pos 62) = false.
-  by rewrite bit_lsr /= bit_M.
-rewrite addn0; apply: eq_bigr => i _.
-rewrite -mulnA; congr (_ * _)%nat; last by rewrite mulnC expnS.
-rewrite -[of_pos _]/((of_nat (lift ord0 i))).
-have iLwB : (i < nwB)%nat.
-  apply: (ltn_trans (ltn_ord _)).
-  apply/ltP/Nat2Z.inj_lt.
-  by rewrite nwBE Z2Nat.id.
-have ipE : to_nat (1 + of_nat i) = i.+1.
-  rewrite to_nat_add 1?of_natK //.
-  rewrite add1n (leq_trans (_ : _ < 63))%nat //; first by rewrite ltnS.
-  apply/ltP/Nat2Z.inj_lt.
-  by rewrite nwBE Z2Nat.id.
-rewrite bit_lsr; case: nlebP; last first.
-  by rewrite ipE 1?of_natK.
-move=> _; congr bit.
-apply: to_nat_inj.
-rewrite ipE of_natK //.
-have := to_nat_bounded (1 + of_nat i).
-by rewrite ipE.
-Qed.
-
-Lemma to_nat_add_lor x y :
-  (forall n : int, bit x n = true -> bit y n = true -> False) ->
-  to_nat (x + y) = (to_nat x + to_nat y)%nat.
-Proof.
-move=> H.
-have -> : x + y = x lor y by apply/bit_add_or.
-rewrite !to_nat_sum -big_split /=.
-apply: eq_bigr => /= i _.
-rewrite lor_spec.
-case: bit (H (of_nat i)); case: bit => //; first by case.
-by rewrite addn0.
-Qed.
-
-Lemma to_nat_lor_add x y :
-  (forall n : int, bit x n = true -> bit y n = true -> False) ->
-  to_nat (x lor y) = (to_nat x + to_nat y)%nat.
-Proof.
-move=> H.
-by case: (bit_add_or x y) => <-  // _; apply: to_nat_add_lor.
-Qed.
-
-Lemma big_lor_add n (P : nat -> bool) (f : nat -> int) : 
-  (forall j k l,  j < n -> k < n -> P j -> P k -> 
-     bit (f j) l = true -> bit (f k) l = true -> j = k) ->
-  (\big[add/0]_(i < n | P i) f i) = \big[olor/0]_(i < n | P i) f i.
-Proof.
-rewrite [in LHS]big_mkcond [in RHS]big_mkcond.
-elim: n => [|n IH] H; first by rewrite !big_ord0.
-rewrite !big_ord_recr /= /olor IH; last first.
-  by move=> j k l jLn kLn; apply: H; rewrite ltnS ltnW.
-apply/bit_add_or => i /=.
-rewrite -big_mkcond big_bit_lor big_mkcond => Hi Hbi.
-case E : (P _) Hbi => // Hbi; last by rewrite bit_0 in Hbi.
-have [/existsP[ /= j /andP[Pn Hj]]|/existsPn /= Hj]:= 
-     boolP [exists j : 'I_n, P j && bit (f j) i].
-  suff nE : n = j by have := ltn_ord j; rewrite -nE ltnn.
-  apply: (H _ _ i) => //.
-  by rewrite ltnS ltnW.
-rewrite big1 //= in Hi.
-move=> k _; case E1 : (P _) => //.
-by have := Hj k; rewrite E1 andTb; case: bit.
-Qed.
-
-Lemma to_nat_lor_exclude n (P : nat -> bool) (f : nat -> int) : 
-  (forall j k l,  j < n -> k < n -> P j -> P k -> 
-     bit (f j) l = true -> bit (f k) l = true -> j = k) ->
-  to_nat (\big[olor/0]_(i < n | P i) f i) = \sum_(i < n | P i) to_nat (f i).
-Proof.
-rewrite [in LHS]big_mkcond [in RHS]big_mkcond.
-elim: n => [|n IH] H; first by rewrite !big_ord0.
-rewrite !big_ord_recr /= {1}/olor /= to_nat_lor_add.
-  congr (_ + _)%nat; last by case: (P n).
-  by apply: IH => j k l hLn kLn; apply: H; rewrite ltnS ltnW.
-move=> i.
-rewrite (big_bit_lor xpredT (fun i : nat => (if P i then f i else 0))).
-case E : (P n); last by rewrite bit_0.
-move=> H1 H2.
-have [/existsP[ /= j /andP[Pn Hj]]|/existsPn /= Hj] := 
-     boolP [exists j : 'I_n, P j && bit (f j) i].
-  suff nE : n = j by have := ltn_ord j; rewrite -nE ltnn.
-  apply: (H _ _ i) => //.
-  by rewrite ltnS ltnW.
-rewrite big1 // in H1.
-move=> j _.
-case: (P j) (Hj j); last by rewrite bit_0.
-by case: bit.
-Qed.
-
-Lemma to_nat_add_exclude n (P : nat -> bool) (f : nat -> int) : 
-  (forall j k l,  j < n -> k < n -> P j -> P k -> 
-     bit (f j) l = true -> bit (f k) l = true -> j = k) ->
-  to_nat (\big[add/0]_(i < n | P i) f i) = \sum_(i < n | P i) to_nat (f i).
-Proof.
-move=> H.
-by rewrite big_lor_add // to_nat_lor_exclude.
-Qed.
-
-
-Lemma divn_inv i j d : (d * j <= i < d.+1 * j -> i %/ j = d)%nat.
-Proof.
-case: j => [|j /andP[djLi iLdj]]; first by rewrite !muln0 ltn0 andbF.
-apply/eqP; rewrite eqn_leq; apply/andP; split; last by rewrite leq_divRL.
-by rewrite -ltnS ltn_divLR.
-Qed.
-
 Lemma bit_get_column_exclude w j k l :
   wf_state w ->
   j < nwidth ->
@@ -914,6 +738,14 @@ have hE : to_nat (of_nat j * horizontal) = (j * nhorizontal)%nat.
 rewrite to_nat_sub // hE //.
 have -> : (to_nat height).+1 = nhorizontal by [].
 by rewrite leq_subRL // addnC -mulSn (leq_trans _ khLl) // leq_pmul2r.
+Qed.
+
+
+Lemma divn_inv i j d : (d * j <= i < d.+1 * j -> i %/ j = d)%nat.
+Proof.
+case: j => [|j /andP[djLi iLdj]]; first by rewrite !muln0 ltn0 andbF.
+apply/eqP; rewrite eqn_leq; apply/andP; split; last by rewrite leq_divRL.
+by rewrite -ltnS ltn_divLR.
 Qed.
 
 Lemma wf_stateE w : 
@@ -1013,13 +845,6 @@ Proof.
 elim: n => [|n IH]; first by rewrite big_ord0.
 by rewrite big_ord_recr /= expnS mul2n -addnn ltn_add2r.
 Qed. 
-
-Lemma ndigitsLwB : (ndigits <= nwB)%nat.
-Proof.
-apply: leq_ltn_trans (_ : Z.to_nat (2 ^ 6) < _)%nat; first by [].
-rewrite nwBE.
-by apply/ltP/Z2Nat.inj_lt.
-Qed.
 
 Lemma ltn_to_nat_get_column s i : 
   (to_nat (get_column s i) < 2 ^ nhorizontal)%nat.
