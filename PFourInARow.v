@@ -1071,7 +1071,7 @@ Qed.
 Lemma is_zero_0 : is_zero 0.
 Proof. by apply/is_zero_spec. Qed.
 
-Lemma bit_le i j : (i <? (one << j)) -> bit i j = false.
+Lemma bit_le i j : (i <? (lsl one j)) -> bit i j = false.
 Proof.
 have iB := to_Z_bounded i.
 case: ltbP => //.
@@ -1092,7 +1092,7 @@ by congr (_ ^ _)%Z; lia.
 Qed.
 
 Lemma land_power2 i k :
-  k <? digits -> i land (decr (one << k)) = i mod (one << k).
+  k <? digits -> i land (decr (lsl one k)) = i mod (lsl one k).
 Proof.
 have iB := to_Z_bounded i.
 have kB := to_Z_bounded k.
@@ -1235,7 +1235,7 @@ Variables (wstate bstate border: int).
 Fixpoint make_columns i column :=
   match i with
       O => nil 
-  | S i => column :: (make_columns i (column << horizontal))
+  | S i => column :: (make_columns i (lsl column horizontal))
   end.
 
 Definition columns := Eval compute in make_columns nwidth first_column.
@@ -1307,10 +1307,10 @@ Fixpoint parsei s i j wstate bstate (turn : bool) :=
     match s with
     | EmptyString => (wstate,bstate,turn)
     | String "X"%char s1 =>
-       let move := one << (j * horizontal + i) in 
+       let move := lsl one (j * horizontal + i) in 
        parsei s1 i (j + 1) (make_move wstate move) bstate (negb turn)
     | String "O"%char s1 =>
-       let move := one << (j * horizontal + i) in 
+       let move := lsl one (j * horizontal + i) in 
        parsei s1 i (j + 1) wstate (make_move bstate move) (negb turn)
     | String "_"%char s1 => 
        parsei s1 i (j + 1) wstate bstate turn
@@ -1337,7 +1337,7 @@ Fixpoint to_stringi m i j wstate bstate :=
   | None => nl
   | Some (i,j,ts) =>
     (ts ++
-   (let move := one << (j * horizontal + i) in 
+   (let move := lsl one (j * horizontal + i) in 
     if is_nzero (move land wstate) then "X"%string ++ (to_stringi m1 i (j + 1) wstate bstate) 
     else if is_nzero (move land bstate) then "O"%string ++ (to_stringi m1 i (j + 1) wstate bstate) 
     else "_"%string ++ (to_stringi m1 i (j + 1) wstate bstate)))%string
@@ -1365,7 +1365,7 @@ Fixpoint sym_code i sres res :=
   match i with 
   | O => sres
   | S i =>
-      let sres :=  (sres << horizontal) lor
+      let sres :=  (lsl sres horizontal) lor
                        (res land full_first_column) in
       let res := res >> horizontal in
       sym_code i sres res
@@ -1400,13 +1400,13 @@ Definition hput wstate bstate turn work score hash_table height :=
    let val1 := (ht.[key]) in
    let val2 := (ht.[key + 1]) in
    if orb ((val1 land lockmask) =? lock) ((val1 >> locksize) <=? work) then
-       let ht := (ht.[key <- (work << locksize) lor lock]) in
+       let ht := (ht.[key <- (lsl work locksize) lor lock]) in
        let ht := (ht.[key + 1 <- 
-                   ((score << scorelocksize) lor (val2 land scorelockmask))]) in
+                   ((lsl score scorelocksize) lor (val2 land scorelockmask))]) in
         (hash_table.[r <- ht])
    else
       let ht := (ht.[key + 1 <-
-        ((((val2 >> scorelocksize) << scoresize) lor score) << locksize)
+        (lsl ((lsl (val2 >> scorelocksize) scoresize) lor score) locksize)
               lor lock]) in
         (hash_table.[r <- ht]).
 
@@ -1590,9 +1590,10 @@ Definition ex3 := (
 Definition ex4 := ("______" ++ "______" ++ "______" ++
                    "______" ++ "______" ++ "______" ++ "______")%string.
 
+(*
 Time Eval native_compute in string_of_score (eval_position ex1).
 Time Eval native_compute in string_of_score (eval_position ex2).
 Time Eval native_compute in string_of_score (eval_position ex3).
 Time Eval native_compute in string_of_score (eval_position ex4).
 
-
+*)
