@@ -200,7 +200,7 @@ Definition  make_move move state := move lor state.
 
 (* Get the log 2 of a number *)
 Definition log2 (v : int) : int :=
-   62 - head0 v.
+  if v =? 0 then 0 else 62 - head0 v.
 
 (* List of possible moves, no move = draw *)
 Inductive moves := EmptyMove | Move (m : int) (v : int) (l : moves).
@@ -215,7 +215,6 @@ match l with
   | _ => Move m v l
   end
 end.
-
 Inductive fmove := 
  | Win
  | Draw

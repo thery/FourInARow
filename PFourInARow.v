@@ -12,6 +12,17 @@ Import Uint63Axioms.
 Import Uint63.
 Open Scope uint63_scope.
 
+Lemma to_nat_incrW i : to_nat (incr i) = (to_nat i).+1 %% nwB.
+Proof. by rewrite to_nat_addW addn1. Qed.
+
+Lemma to_nat_incr i : (to_nat i).+1 < nwB -> to_nat (incr i) = (to_nat i).+1.
+Proof. by move=> iLw; rewrite to_nat_add ?addn1. Qed.
+
+Lemma to_nat_decrW i : to_nat (decr i) = (nwB.-1 + to_nat i) %% nwB.
+Proof. by rewrite to_nat_subW subDnCA ?(to_nat_bounded 0) // subn1 addnC. Qed.
+
+Lemma to_nat_decr i : 0 <? i -> to_nat (decr i) = (to_nat i).-1.
+Proof. by move=> /nltbP iP; rewrite to_nat_sub ?subn1 // to_nat_bounded. Qed.
 
 Lemma nhorizontalLwB : nhorizontal < nwB.
 Proof.
@@ -560,7 +571,6 @@ Definition get_column (state : int) (i : int) :=
 Lemma get_column0 i : get_column 0 i = 0.
 Proof. by rewrite /get_column lsr0 land0. Qed.
 
-
 Lemma bit_get_column0 s i j :  height <? j -> bit (get_column s i) j = false.
 Proof.
 have iB := to_Z_bounded i.
@@ -630,6 +640,136 @@ Proof.
 apply/existsP; exists 0.
 case: nlebP => // _; apply/forallP => k.
 by rewrite bit_0; case: nltbP.
+Qed.
+
+Lemma to_nat_lsl_one i :
+  (to_nat i < ndigits)%N -> to_nat (lsl one  i) = (2 ^ to_nat i)%N.
+Proof.
+move=> iLd.
+by rewrite to_nat_lslW mul1n modn_small // nwB_pow ltn_exp2l.
+Qed.
+
+Lemma head0_digits x : head0 x <=? digits.
+Proof.
+have [->//|x_pos]:= x =P 0.
+have x_tpos : 0 < to_nat x.
+  rewrite ltnNge; apply/negP => H; case: x_pos.
+  by apply/to_nat_inj; case: (to_nat _) H.
+apply/nlebP.
+rewrite -(leq_exp2l _ _ (isT : 1 < 2)) -nwB_pow.
+apply: leq_trans (leq_pmulr _ x_tpos) (ltnW _).
+by have /andP[_] := (@to_nat_head0 x x_tpos).
+Qed.
+
+Lemma head0_pos_digits x : 0 < to_nat x -> head0 x <? digits.
+Proof.
+move=> x_tpos; apply/nltbP.
+rewrite -(ltn_exp2l _ _ (isT : 1 < 2)) -nwB_pow.
+apply: leq_ltn_trans (leq_pmulr _ x_tpos) _.
+by have /andP[_] := (@to_nat_head0 x x_tpos).
+Qed.
+
+Lemma log2_digits x : log2 x <? digits.
+Proof.
+have H62 := to_nat_bounded 62.
+rewrite /log2; case: neqbP => [//|x_pos].
+apply/nltbP.
+rewrite to_nat_sub //; first by rewrite (leq_ltn_trans (leq_subr _ _)).
+rewrite -ltnS -[(to_nat 62).+1]/(to_nat digits).
+apply/nltbP/head0_pos_digits.
+by case: (to_nat _) x_pos.
+Qed.
+
+Lemma ltn_log2 x : to_nat x < (2 ^ (to_nat (log2 x)).+1)%N.
+Proof.
+rewrite /log2; case: (neqbP x) => [/to_nat_inj -> //|x_D].
+have x_tpos : 0 < to_nat x by case: (to_nat _) x_D.
+have hL62 : (to_nat (head0 x) <= to_nat 62)%N.
+  by have /nltbP := head0_pos_digits _ x_tpos.
+rewrite to_nat_sub //; last by apply: leq_trans ndigitsLwB.
+rewrite -(ltn_pmul2l (_ : 0 < 2 ^ (to_nat (head0 x)))); last by rewrite expn_gt0.
+rewrite -expnD addnS addnC subnK //.
+by have /andP[] := to_nat_head0 _ x_tpos; rewrite nwB_pow.
+Qed.
+
+Lemma leq_log2 x : 0 < to_nat x -> (2 ^ to_nat (log2 x))%N <= to_nat x.
+Proof.
+rewrite /log2; case: (neqbP x) => [|_ x_tpos]; first by case: (to_nat _).
+have hL62 : (to_nat (head0 x) <= to_nat 62)%N.
+  by have /nltbP := head0_pos_digits _ x_tpos.
+rewrite to_nat_sub //; last by apply: leq_trans ndigitsLwB.
+rewrite -(leq_pmul2l (_ : 0 < 2 ^ (to_nat (head0 x)))); last by rewrite expn_gt0.
+rewrite -expnD addnC subnK //.
+suff -> : 2 ^ to_nat 62 = nwB %/2.
+  by have /andP[] := to_nat_head0 _ x_tpos; rewrite nwB_pow.
+rewrite nwB_pow -[ndigits]/(63%N) expnS mul2n divn2.
+by rewrite -[_.*2]add0n (half_bit_double _ false).
+Qed.
+
+Lemma log2E x y : 2 ^ to_nat y <= to_nat x < 2 ^ (to_nat y).+1 -> log2 x = y.
+Proof.
+case: (neqbP x 0) => [-> //|x_D].
+  by rewrite leqNgt => /andP[/negP[]]; rewrite expn_gt0.
+move=> /andP[yLx xLy];  have x_tpos : 0 < to_nat x by case: (to_nat _) x_D.
+apply: to_nat_inj; case: (ltngtP (to_nat (log2 x)) (to_nat y)) => // [xLy'|yLx'].
+  move: yLx; rewrite leqNgt => /negP[].
+  by rewrite (leq_trans (ltn_log2 _)) // leq_pexp2l.
+ move: xLy; rewrite ltnNge => /negP[].
+by rewrite (leq_trans _ (leq_log2 _ x_tpos)) // leq_pexp2l.
+Qed.
+
+Definition up_log2 i := if i == 0 then 0 else incr (log2 i).
+
+Lemma ltn_up_log2 x : to_nat x < (2 ^ (to_nat (up_log2 x)))%N.
+Proof.
+rewrite /up_log2; case: eqP => [-> //|x_neq0].
+rewrite to_nat_incr.
+apply: ltn_log2.
+apply: leq_trans (_ : ndigits.+1 <= _).
+  by rewrite ltnS; apply/nltbP/log2_digits.
+by have := to_nat_bounded digits.
+Qed.
+
+Lemma leq_up_log2 x : 0 < to_nat x -> 2 ^ (to_nat (up_log2 x)).-1 <= to_nat x.
+Proof.
+rewrite /up_log2; case: eqP => [->//|xD x_pos].
+rewrite to_nat_incr ?leq_log2 //=.
+apply: leq_trans (_ : ndigits.+1 <= _).
+  by rewrite ltnS; apply/nltbP/log2_digits.
+by have := to_nat_bounded digits.
+Qed.
+
+Lemma opzsE' b i :
+  b <? digits -> 
+  opzs b i = (up_log2 i <=? b) && (i == decr (lsl one (up_log2 i))).
+Proof.
+move=> bLd; rewrite (opzsE _ _ bLd).
+apply/existsP/andP=> [[/= j /andP[H1 H2]]|[/nlebP H1 /eqP H2]]; last first.
+  exists (up_log2 i); rewrite -H2 eqxx andbT.
+  by apply/nlebP.
+rewrite /up_log2; case: eqP => [->|i_neq0].
+  by split => //; apply/nlebP.
+case: (neqbP j 0) => [/to_nat_inj jE|jD0].
+  by rewrite (eqP H2) jE in i_neq0.
+have j_pos : 0 < to_nat j by case: (to_nat _) jD0.
+have jB := to_nat_bounded j.
+have tjE : to_nat (decr j) = (to_nat j).-1 by apply/to_nat_decr/nltbP.
+have jE : log2 i = decr j.
+  apply: log2E; rewrite tjE prednK //.
+  have jLd : to_nat j < ndigits.
+    apply: leq_trans (_ : to_nat b < ndigits)%N; last by apply/nltbP.
+    by rewrite ltnS; apply/nlebP.
+  rewrite (eqP H2) to_nat_decr; last first.
+    by apply/nltbP; rewrite to_nat_lsl_one ?expn_gt0.
+  rewrite -ltnS to_nat_lsl_one // prednK ?leqnn ?andbT ?expn_gt0 //.
+  by rewrite ltn_exp2l // prednK.
+rewrite jE; split; last first.
+  suff -> : incr (decr j) = j by [].
+  apply: to_nat_inj.
+  by rewrite to_nat_incr ?tjE ?prednK.
+apply/nlebP.
+rewrite to_nat_incr tjE prednK //.
+by apply/nlebP.
 Qed.
 
 Definition cell (w : int) (i : nat) (j : nat) := 
@@ -874,7 +1014,7 @@ have ->// := to_nat_add_exclude nwidth xpredT
                (fun i => lsl (get_column w (of_nat i)) (of_nat i * horizontal)).
   apply: eq_bigr => /= i _.
   have iLwB : (i < nwB)%nat by apply: ltn_trans nwidthLwB.
-  rewrite to_nat_lsl to_nat_mul 1?of_natK //.
+  rewrite to_nat_lslW to_nat_mul 1?of_natK //.
     rewrite modn_small //.
     apply: leq_trans (_ : _ < 2 ^ nhorizontal * 2 ^ (i * nhorizontal))%nat _.
       rewrite ltn_pmul2r; first by apply: ltn_to_nat_get_column.
@@ -992,43 +1132,8 @@ Definition get_border (wstate bstate : int) :=
 Definition  make_move move state := move lor state.
 *)
 
-Lemma log2_0 : log2 0 = decr 0.
+Lemma log2_0 : log2 0 = 0.
 Proof.  by []. Qed.
-
-Lemma log2_spec i : i <> 0 ->
-  (2 ^ (to_Z (log2 i)) <= to_Z i < 2 ^ (to_Z (log2 i) + 1))%Z.
-Proof.
-move=> iD0.
-have := head0_lt _ iD0; case: ltbP => // hLd _.
-have iB := to_Z_bounded (head0 i).
-rewrite sub_spec Z.mod_small; last first.
-  rewrite -[wB]/(2 ^ φ (digits))%Z -[to_Z 62]/(φ (digits) - 1)%Z.
-  split; try lia.
-  suff : (φ (digits) < 2 ^ φ (digits))%Z by lia.
-  by apply: Zpow_facts.Zpower2_lt_lin; lia.
-have F1 : (2 ^ to_Z (head0 i) > 0)%Z by lia.
-have F2 : (0 <  φ (i))%Z.
-  case: (eqbP i 0); rewrite ?to_Z_0 => H.
-    by case: iD0; apply: to_Z_inj.
-  by have := to_Z_bounded i; lia.
-have F3 := head0_spec i F2.
-rewrite -[(wB/2)%Z]/(2 ^ to_Z 62)%Z -[wB]/(2 ^ (to_Z 62 + 1))%Z in F3.
-split.
-  apply: (Zmult_le_reg_r _ _ _ F1).
-  rewrite -Z.pow_add_r; try lia; last first. 
-    have := head0_lt _ iD0; case: ltbP => //.
-    by rewrite -[to_Z 62]/(φ (digits) - 1)%Z; lia.
-  have ->: (to_Z 62 - to_Z (head0 i) + to_Z (head0 i) = to_Z 62)%Z by lia.
-  by lia.
-have F1' : (0 < 2 ^ to_Z (head0 i))%Z by lia.
-apply: (Zmult_lt_reg_r _ _ _ F1').
-rewrite -Z.pow_add_r; try lia; last first. 
-  have := head0_lt _ iD0; case: ltbP => //.
-  by rewrite -[to_Z 62]/(φ (digits) - 1)%Z; lia.
-have ->: (to_Z 62 - to_Z (head0 i) + 1 + to_Z (head0 i) = to_Z 62 + 1)%Z by lia.
-by lia.
-Qed.
-
 
 (* List of possible moves, no move = draw *)
 Inductive moves := EmptyMove | Move (m : int) (v : int) (l : moves).
