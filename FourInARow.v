@@ -203,18 +203,13 @@ Definition log2 (v : int) : int :=
   if v =? 0 then 0 else 62 - head0 v.
 
 (* List of possible moves, no move = draw *)
-Inductive moves := EmptyMove | Move (m : int) (v : int) (l : moves).
+Definition moves := list (int * int)%type.
 
 (* Moves are ordered by their values *)
-Fixpoint insert_fmove m (v : int) l := 
-match l with 
-| EmptyMove => Move m v EmptyMove
-| Move m1 v1 l1 => 
-  match v ?= v1 with
-  |Lt => Move m1 v1 (insert_fmove m v l1)
-  | _ => Move m v l
-  end
-end.
+Fixpoint insert_fmove (m : int) (v : int) l := 
+  if l is (m1,v1)  :: l1 then
+    if v ?= v1 is Lt then (m1, v1) :: (insert_fmove m v l1) else (m, v) :: l
+  else (m, v) :: nil.
 Inductive fmove := 
  | Win
  | Draw
@@ -222,7 +217,7 @@ Inductive fmove :=
  | Moves (_: moves).
 
 Definition make_moves l :=
-  match l with EmptyMove => Draw | _ => Moves l end.
+  if l is nil then Draw else Moves l.
 
 Section FindMoves.
 
@@ -289,7 +284,7 @@ End FindMoves.
 (* Find possible moves *)
 Definition find_moves wstate bstate :=
   let border := get_border wstate bstate in
-  fms wstate bstate border columns EmptyMove.
+  fms wstate bstate border columns nil.
 
 (* Auxillary parsing function from string to states *)
 Fixpoint parsei s i j wstate bstate (turn : bool) :=
@@ -423,8 +418,7 @@ Definition hget (wstate bstate : int) (turn : bool)
        (val2 >> locksize) land scoremask
    else unknown.
 
-Definition is_nempty_move m :=
-  match m with EmptyMove => false | Move _ _ _ => true end.
+Definition is_nempty_move (m : moves) := if m is _ :: _ then true else false.
 
 (* Process result *)
 Inductive pres := PRes (s : int) (v : int) (t : array (array int)).
@@ -437,12 +431,12 @@ Variables (wstate bstate : int) (turn : bool) (beta : int) (lvisited : int)
                          array (array int) -> pres).
 Fixpoint process ms alpha score visited hash_table :=
   match ms with
-  | EmptyMove =>
+  | nil =>
       let score := if (score =? losswin - hscore) then draw else score in
       let work := log2 (sub visited lvisited) in
       let hash_table := hput wstate bstate turn work score hash_table height in
       PRes score (incr visited) hash_table
-  | Move move _ ms1 =>
+  | (move, _) :: ms1 =>
     let (nscore,visited,hash_table) := 
       alpha_beta bstate (make_move move wstate) (negb turn)
            (rev_val beta) (rev_val alpha) visited hash_table in
@@ -582,9 +576,6 @@ Definition ex3 := (
               ++ "___X___"
               ++ "___O___"
               ++ "XO_X___")%string.
-
-Definition ex4 := ("______" ++ "______" ++ "______" ++
-                   "______" ++ "______" ++ "______" ++ "______")%string.
 
 (*
 Time Eval native_compute in string_of_score (eval_position ex1).
