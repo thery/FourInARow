@@ -5,7 +5,7 @@
 
 From Stdlib Require Import ssreflect ZArith Ascii List String PrimInt63.
 From Stdlib Require Import PArray.
-
+Require Import -(notations) ssr_int.
 
 Import PrimInt63Notations.
 Import Uint63Axioms.
@@ -56,15 +56,6 @@ Definition make_matrix (A: Type) n m (v : A) :=
   init_matrix (to_nat n) n a v m.
 
 Arguments make_matrix[A].
-
-(* 63 Arithmetic *)
-
-Definition one := of_Z 1.
-Definition zero := of_Z 0.
-
-Definition decr s := s - 1.
-Definition incr s := s + 1.
-Definition is_nzero s := negb (eqb s zero).
 
 (* Width of the board *)
 Definition width := 7.
@@ -198,10 +189,6 @@ Definition get_border (wstate bstate : int) :=
 (* Perform a move *)
 Definition  make_move move state := move lor state.
 
-(* Get the log 2 of a number *)
-Definition log2 (v : int) : int :=
-  if v =? 0 then 0 else 62 - head0 v.
-
 (* List of possible moves, no move = draw *)
 Definition moves := list (int * int)%type.
 
@@ -223,13 +210,13 @@ Section FindMoves.
 
 Variables (wstate bstate border: int).
 
-Fixpoint make_colums i column :=
+Fixpoint make_columns i column :=
   match i with
       O => nil 
-  | S i => column :: (make_colums i (column << horizontal))
+  | S i => column :: (make_columns i (column << horizontal))
   end.
 
-Definition columns := Eval compute in make_colums nwidth first_column.
+Definition columns := Eval compute in make_columns nwidth first_column.
 
 (* Check for a direct win after a threat *)
 Fixpoint fmt columns res :=

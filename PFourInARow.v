@@ -12,18 +12,6 @@ Import Uint63Axioms.
 Import Uint63.
 Open Scope uint63_scope.
 
-Lemma to_nat_incrW i : to_nat (incr i) = (to_nat i).+1 %% nwB.
-Proof. by rewrite to_nat_addW addn1. Qed.
-
-Lemma to_nat_incr i : (to_nat i).+1 < nwB -> to_nat (incr i) = (to_nat i).+1.
-Proof. by move=> iLw; rewrite to_nat_add ?addn1. Qed.
-
-Lemma to_nat_decrW i : to_nat (decr i) = (nwB.-1 + to_nat i) %% nwB.
-Proof. by rewrite to_nat_subW subDnCA ?(to_nat_bounded 0) // subn1 addnC. Qed.
-
-Lemma to_nat_decr i : 0 <? i -> to_nat (decr i) = (to_nat i).-1.
-Proof. by move=> /nltbP iP; rewrite to_nat_sub ?subn1 // to_nat_bounded. Qed.
-
 Lemma nhorizontalLwB : nhorizontal < nwB.
 Proof.
 rewrite -[nhorizontal]/(to_nat horizontal).
@@ -648,103 +636,6 @@ case: nlebP => // _; apply/forallP => k.
 by rewrite bit_0; case: nltbP.
 Qed.
 
-Lemma to_nat_lsl_one i :
-  (to_nat i < ndigits)%N -> to_nat (lsl one  i) = (2 ^ to_nat i)%N.
-Proof.
-move=> iLd.
-by rewrite to_nat_lslW mul1n modn_small // nwB_pow ltn_exp2l.
-Qed.
-
-Lemma head0_digits x : head0 x <=? digits.
-Proof.
-have [->//|x_pos]:= x =P 0.
-have x_tpos : 0 < to_nat x.
-  rewrite ltnNge; apply/negP => H; case: x_pos.
-  by apply/to_nat_inj; case: (to_nat _) H.
-apply/nlebP.
-rewrite -(leq_exp2l _ _ (isT : 1 < 2)) -nwB_pow.
-apply: leq_trans (leq_pmulr _ x_tpos) (ltnW _).
-by have /andP[_] := (@to_nat_head0 x x_tpos).
-Qed.
-
-Lemma head0_pos_digits x : 0 < to_nat x -> head0 x <? digits.
-Proof.
-move=> x_tpos; apply/nltbP.
-rewrite -(ltn_exp2l _ _ (isT : 1 < 2)) -nwB_pow.
-apply: leq_ltn_trans (leq_pmulr _ x_tpos) _.
-by have /andP[_] := (@to_nat_head0 x x_tpos).
-Qed.
-
-Lemma log2_digits x : log2 x <? digits.
-Proof.
-have H62 := to_nat_bounded 62.
-rewrite /log2; case: neqbP => [//|x_pos].
-apply/nltbP.
-rewrite to_nat_sub //; first by rewrite (leq_ltn_trans (leq_subr _ _)).
-rewrite -ltnS -[(to_nat 62).+1]/(to_nat digits).
-apply/nltbP/head0_pos_digits.
-by case: (to_nat _) x_pos.
-Qed.
-
-Lemma ltn_log2 x : to_nat x < (2 ^ (to_nat (log2 x)).+1)%N.
-Proof.
-rewrite /log2; case: (neqbP x) => [/to_nat_inj -> //|x_D].
-have x_tpos : 0 < to_nat x by case: (to_nat _) x_D.
-have hL62 : (to_nat (head0 x) <= to_nat 62)%N.
-  by have /nltbP := head0_pos_digits _ x_tpos.
-rewrite to_nat_sub //; last by apply: leq_trans ndigitsLwB.
-rewrite -(ltn_pmul2l (_ : 0 < 2 ^ (to_nat (head0 x)))); last by rewrite expn_gt0.
-rewrite -expnD addnS addnC subnK //.
-by have /andP[] := to_nat_head0 _ x_tpos; rewrite nwB_pow.
-Qed.
-
-Lemma leq_log2 x : 0 < to_nat x -> (2 ^ to_nat (log2 x))%N <= to_nat x.
-Proof.
-rewrite /log2; case: (neqbP x) => [|_ x_tpos]; first by case: (to_nat _).
-have hL62 : (to_nat (head0 x) <= to_nat 62)%N.
-  by have /nltbP := head0_pos_digits _ x_tpos.
-rewrite to_nat_sub //; last by apply: leq_trans ndigitsLwB.
-rewrite -(leq_pmul2l (_ : 0 < 2 ^ (to_nat (head0 x)))); last by rewrite expn_gt0.
-rewrite -expnD addnC subnK //.
-suff -> : 2 ^ to_nat 62 = nwB %/2.
-  by have /andP[] := to_nat_head0 _ x_tpos; rewrite nwB_pow.
-rewrite nwB_pow -[ndigits]/(63%N) expnS mul2n divn2.
-by rewrite -[_.*2]add0n (half_bit_double _ false).
-Qed.
-
-Lemma log2E x y : 2 ^ to_nat y <= to_nat x < 2 ^ (to_nat y).+1 -> log2 x = y.
-Proof.
-case: (neqbP x 0) => [-> //|x_D].
-  by rewrite leqNgt => /andP[/negP[]]; rewrite expn_gt0.
-move=> /andP[yLx xLy];  have x_tpos : 0 < to_nat x by case: (to_nat _) x_D.
-apply: to_nat_inj; case: (ltngtP (to_nat (log2 x)) (to_nat y)) => // [xLy'|yLx'].
-  move: yLx; rewrite leqNgt => /negP[].
-  by rewrite (leq_trans (ltn_log2 _)) // leq_pexp2l.
- move: xLy; rewrite ltnNge => /negP[].
-by rewrite (leq_trans _ (leq_log2 _ x_tpos)) // leq_pexp2l.
-Qed.
-
-Definition up_log2 i := if i == 0 then 0 else incr (log2 i).
-
-Lemma ltn_up_log2 x : to_nat x < (2 ^ (to_nat (up_log2 x)))%N.
-Proof.
-rewrite /up_log2; case: eqP => [-> //|x_neq0].
-rewrite to_nat_incr.
-apply: ltn_log2.
-apply: leq_trans (_ : ndigits.+1 <= _).
-  by rewrite ltnS; apply/nltbP/log2_digits.
-by have := to_nat_bounded digits.
-Qed.
-
-Lemma leq_up_log2 x : 0 < to_nat x -> 2 ^ (to_nat (up_log2 x)).-1 <= to_nat x.
-Proof.
-rewrite /up_log2; case: eqP => [->//|xD x_pos].
-rewrite to_nat_incr ?leq_log2 //=.
-apply: leq_trans (_ : ndigits.+1 <= _).
-  by rewrite ltnS; apply/nltbP/log2_digits.
-by have := to_nat_bounded digits.
-Qed.
-
 Lemma opzsE' b i :
   b <? digits -> 
   opzs b i = (up_log2 i <=? b) && (i == decr (lsl one (up_log2 i))).
@@ -927,13 +818,6 @@ have -> : (to_nat height).+1 = nhorizontal by [].
 by rewrite leq_subRL // addnC -mulSn (leq_trans _ khLl) // leq_pmul2r.
 Qed.
 
-Lemma divn_inv i j d : (d * j <= i < d.+1 * j -> i %/ j = d)%nat.
-Proof.
-case: j => [|j /andP[djLi iLdj]]; first by rewrite !muln0 ltn0 andbF.
-apply/eqP; rewrite eqn_leq; apply/andP; split; last by rewrite leq_divRL.
-by rewrite -ltnS ltn_divLR.
-Qed.
-
 Lemma wf_stateE w : 
   wf_state w -> w = \big[add/0]_(i < nwidth) (lsl (get_column w (of_nat i)) (of_nat i * horizontal)).
 Proof.
@@ -1026,12 +910,6 @@ apply/sym_equal/divn_inv.
 by rewrite jhLi mulSn addnC -ltn_subLR.
 Qed.
 
-Lemma sum_pow2 n : (\sum_(i < n) 2 ^ i < 2 ^ n)%nat.
-Proof.
-elim: n => [|n IH]; first by rewrite big_ord0.
-by rewrite big_ord_recr /= expnS mul2n -addnn ltn_add2r.
-Qed. 
-
 Lemma ltn_to_nat_get_column s i : 
   (to_nat (get_column s i) < 2 ^ nhorizontal)%nat.
 Proof.
@@ -1078,9 +956,6 @@ have ->// := to_nat_add_exclude nwidth xpredT
   by rewrite ltn_pmul2r.
 by move=> j k l jLw kLw _ _; apply: bit_get_column_exclude.
 Qed.
-
-Lemma is_zero_0 : is_zero 0.
-Proof. by apply/is_zero_spec. Qed.
 
 Lemma bit_le i j : (i <? (lsl one j)) -> bit i j = false.
 Proof.
@@ -1154,53 +1029,11 @@ rewrite -Z.pow_add_r; try lia.
 rewrite /to_Z /=; lia.
 Qed.
 
-Lemma head0_lt i : i <> 0 -> (head0 i) <? digits.
-Proof.
-have iB := to_Z_bounded i.
-move=> iD0.
-case: ltbP => // /Z.nlt_ge dLh.
-have iP : (0 < φ (i))%Z.
-  suff : (φ (i) <> 0)%Z by lia.
-  by contradict iD0; apply: to_Z_inj; rewrite to_Z_0. 
-have F1 : (2 ^ φ(head0 i) * φ (i) < wB)%Z.
-  by have := head0_spec _ iP; lia.
-have F2 : (2 ^ to_Z (head0 i) < wB)%Z by nia.
-suff : (wB <= 2 ^ to_Z (head0 i))%Z by lia.
-apply: Z.pow_le_mono_r; try lia.
-by rewrite -[IntDef.Z.of_nat size]/(φ (digits)); lia.
-Qed.
-
-Lemma sum_exp_bound j k f : 
-  (forall i, i < j -> f i < 2 ^ k) ->
-  \sum_(i < j)  (f i) * 2 ^ (i * k)  < 2 ^ (j * k).
-Proof.
-elim: j => [|j IH] Hi; first by rewrite big_ord0.
-rewrite big_ord_recr /= -addSn.
-apply: leq_trans (_ : 2 ^ (j * k) + f j * 2 ^ (j * k) <= _).
-  by rewrite leq_add2r IH // => i iLj; apply: Hi; rewrite ltnS ltnW.
-by rewrite mulSn expnD -mulSn leq_mul2r Hi ?orbT.
-Qed.
-
 Lemma to_nat_all_set : to_nat all_set = (2 ^ (nwidth * nhorizontal)).-1.
 Proof.
 rewrite to_nat_decr; last by [].
 rewrite to_nat_lsl_one; last by [].
 by congr (_ ^ _).-1.
-Qed.
-
-Lemma to_nat_div x y : to_nat (x / y) = to_nat x %/ to_nat y.
-Proof.
-have xB := to_Z_bounded x; have yB := to_Z_bounded y.
-rewrite div_spec.
-apply: Nat2Z.inj.
-by rewrite Z_of_nat_div !Z2Nat.id //; try apply: Z_div_nonneg_nonneg; lia.
-Qed.
-
-Lemma sum_rev i (f : nat -> nat) : \sum_(j < i) f j = \sum_(j < i) f (i.-1 - j).
-Proof.
-rewrite -(big_mkord xpredT) big_nat_rev /= big_mkord.
-apply: eq_bigr => /= k _; congr f.
-by rewrite add0n /= -[in RHS]subSS prednK //; case: k => /=; case: (i).
 Qed.
 
 Lemma bottomE : to_nat bottom = \sum_(i < nwidth) 2 ^ (i * nhorizontal).
@@ -1286,57 +1119,6 @@ apply: leq_trans (_ : 2 ^ 8 <= _); first by [].
 by rewrite nwB_pow leq_exp2l.
 Qed.
 
-Lemma mul_add_distr_r n m p : (n + m) * p = n * p + m * p.
-Proof.
-apply: to_nat_inj.
-rewrite to_nat_mulW to_nat_addW modnMml mulnDl [RHS]to_nat_addW.
-by rewrite to_nat_mulW modnDml to_nat_mulW modnDmr.
-Qed.
-
-Lemma mul_add_distr_l n m p : n * (m + p) = n * m + n * p.
-Proof.
-apply: to_nat_inj.
-rewrite to_nat_mulW to_nat_addW modnMmr mulnDr [RHS]to_nat_addW.
-by rewrite -modnDml -to_nat_mulW -modnDmr -to_nat_mulW.
-Qed.
-
-Lemma mul_comm m n : m * n = n * m.
-Proof. by apply: to_nat_inj; rewrite to_nat_mulW mulnC -to_nat_mulW. Qed.
-
-Lemma to_nat_oppW m : to_nat (- m) = (nwB - to_nat m) %% nwB.
-Proof.
-rewrite opp_spec.
-have [phi_pos phiB] := to_Z_bounded m.
-have -> : (- φ (m) mod wB = (wB - φ (m)) mod wB)%Z.
-  by rewrite -[in RHS]Zminus_mod_idemp_l Z_mod_same_full Z.sub_0_l.
-rewrite nwBE -[(_ - _)%N]Z2Nat.inj_sub //.
-apply/Nat2Z.inj.
-rewrite Z_of_nat_mod !Z2Nat.id //; first by lia.
-suff : (0 <= (wB - φ (m)) mod wB < wB)%Z by lia.
-by apply: Z.mod_pos_bound; lia.
-Qed.
-
-Lemma minus_addE m n : m - n = m + (- n).
-Proof.
-apply: to_nat_inj; rewrite to_nat_addW to_nat_subW.
-rewrite -addnBAC; last by apply/ltnW/to_nat_bounded.
-by rewrite to_nat_oppW modnDmr addnC.
-Qed.
-
-Lemma mul_N1_l m : (-(1)) * m = - m.
-Proof.
-apply: to_nat_inj.
-rewrite to_nat_mulW to_nat_oppW modnMml.
-rewrite [RHS]to_nat_oppW.
-rewrite mulnBl mul1n.
-have := to_nat_bounded m.
-case: (to_nat m) => [|k kLwB]; first by rewrite !subn0 muln0 modnn mod0n.
-rewrite mulnS -addnBAC; last by rewrite ltnW.
-by rewrite -modnDmr modnMr addn0.
-Qed.
-
-Lemma subn3 n : (n - 3 = n.-1.-2)%N.
-Proof. by case: n => // [] [|[|[]]]. Qed.
 
 Lemma is_won_cwin w b : wf_state (w lor b) -> is_won w = cwin w.
 Proof.
@@ -1713,9 +1495,6 @@ Definition get_border (wstate bstate : int) :=
 Definition  make_move move state := move lor state.
 *)
 
-Lemma log2_0 : log2 0 = 0.
-Proof.  by []. Qed.
-
 (*
 (* List of possible moves, no move = draw *)
 Inductive moves := EmptyMove | Move (m : int) (v : int) (l : moves).
@@ -1732,9 +1511,6 @@ match l with
 end.
 *)
 
-Lemma neq_eqE m1 m2 : (m1 =? m2) = (m1 == m2).
-Proof. by apply/neqbP/eqP => [/to_nat_inj|->//]. Qed.
-
 Lemma in_insert_fmove m1 m2 v1 v2 l : 
   (m1, v1) \in (insert_fmove m2 v2 l) = 
   (m1 == m2) && (v1 == v2) || ((m1,v1) \in l).
@@ -1744,7 +1520,29 @@ case: (_ ?= _); rewrite ?inE ?xpair_eqE ?orbF ?IH //.
 by do 2 case: (_ && _).
 Qed.
 
-Variables (wstate bstate border: int).
+Definition cmove s (x : nat) (y : nat) :=
+ [&& x < nwidth, y < nheight & 
+   [forall z : 'I_nheight, cell s x z == (z < y)]].
+  
+Lemma cmove_cell s x y : cmove s x y -> ~~ cell s x y.
+Proof.
+by move/and3P => [xLw yLh /forallP/(_ (Ordinal yLh))/eqP->]; rewrite ltnn.
+Qed.
+
+Lemma cmove_lt s x y z : cmove s x y -> z < y -> cell s x z.
+Proof.
+move/and3P => [xLw yLh /forallP Hf] zLy.
+by have /eqP-> := Hf (Ordinal (ltn_trans zLy yLh)).
+Qed.
+
+Lemma cmove_ge s x y z : cmove s x y -> y <= z < nheight -> ~~ cell s x z.
+Proof.
+move/and3P => [xLw yLh /forallP Hf] /andP[yLz zLh].
+by have /eqP-> /= := Hf (Ordinal zLh); rewrite ltnNge yLz.
+Qed.
+
+Lemma cmoveE s x y : cmove s x y -> y = 
+(*
 
 Fixpoint make_columns i column :=
   match i with
@@ -1753,6 +1551,58 @@ Fixpoint make_columns i column :=
   end.
 
 Definition columns := Eval compute in make_columns nwidth first_column.
+
+*)
+
+Lemma columns_size : seq.size columns = nwidth.
+Proof.
+have -> : columns = make_columns nwidth first_column by [].
+by elim: nwidth first_column => //= ? IH c; rewrite IH.
+Qed.
+
+Lemma lsl_add_distl x m n :
+  (to_nat n + to_nat m < nwB)%nat -> lsl x (m + n) = lsl (lsl x m) n.
+Proof.
+move=> mnLw; apply: to_nat_inj.
+rewrite 3!to_nat_lslW to_nat_add; last by rewrite addnC.
+by rewrite expnD mulnA modnMml.
+Qed.
+
+Lemma columns_val i : 
+  i < nwidth -> nth 0 columns i = lsl first_column (of_nat i * horizontal).
+Proof.
+move=> iLw.
+have: i * nhorizontal < nwB by apply: ltn_trans nwihoLwB; rewrite ltn_mul2r.
+have -> : columns = make_columns nwidth first_column by [].
+have {1}-> : first_column = lsl first_column (of_nat 0 * horizontal).
+  by rewrite lsl0_r.
+have {1 3}-> : i = (0 + i)%N by [].
+move: 0%nat => j.
+elim: nwidth i j iLw  => //= w IH [|i] j; first by rewrite addn0.
+rewrite ltnS => iLw ijLw /=.
+rewrite -lsl_add_distl.
+  have -> : of_nat j * horizontal + horizontal = of_nat (j.+1) * horizontal.
+    have ->: of_nat j.+1 = of_nat j + 1.
+      apply: to_nat_inj.
+    rewrite -addn1.
+Search lsl (_ + _).
+rewrite IH.
+rewrite [in LHS]/=.
+by [].
+  case => //. 
+
+
+elim: nwidth i first_column=> [[]//|w IH [|i]/=].
+rewrite lsl0_r.
+Search lsl 0.
+Search lsl.
+
+
+
+(*
+Section FindMoves.
+
+Variables (wstate bstate border: int).
 
 (* Check for a direct win after a threat *)
 Fixpoint fmt columns res :=
@@ -1781,33 +1631,39 @@ Fixpoint fms columns res :=
         let v := (values.[log2 move]) in
         fms columns (insert_fmove move v res)
    end.
+*)
 
-Lemma fmsE columns res :
-fms columns res =
+Lemma fmsE wstate bstate border columns res :
+fms wstate bstate border columns res =
   match columns with 
   | nil => make_moves res
   | column :: columns =>
       let move := border land column in
-      if is_zero move then fms columns res
+      if is_zero move then fms wstate bstate border columns res
       else
       if is_won (make_move move wstate) then Win
       else
       if is_won (make_move move bstate) then 
-        fmt columns (Forced move)
+        fmt wstate border columns (Forced move)
       else
         let v := (values.[log2 move]) in
-        fms columns (insert_fmove move v res)
+        fms wstate bstate border columns (insert_fmove move v res)
    end.
 Proof.
 by case: columns.
 Qed.
 
+(*
 End FindMoves.
+*)
 
+Check 
+(*
 (* Find possible moves *)
 Definition find_moves wstate bstate :=
   let border := get_border wstate bstate in
-  fms wstate bstate border columns EmptyMove.
+  fms wstate bstate border columns [::].
+*)
 
 (* Auxillary parsing function from string to states *)
 Fixpoint parsei s i j wstate bstate (turn : bool) :=
