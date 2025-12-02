@@ -1,4 +1,3 @@
-
 From Stdlib Require Import ZArith Ascii List String PrimInt63.
 From Stdlib Require Import -(notations) PArray.
 From mathcomp Require Import all_boot.
@@ -1522,26 +1521,104 @@ Qed.
 
 Definition cmove s (x : nat) (y : nat) :=
  [&& x < nwidth, y < nheight & 
-   [forall z : 'I_nheight, cell s x z == (z < y)]].
+   [forall z : 'I_nhorizontal, cell s x z == (z < y)]].
   
 Lemma cmove_cell s x y : cmove s x y -> ~~ cell s x y.
 Proof.
-by move/and3P => [xLw yLh /forallP/(_ (Ordinal yLh))/eqP->]; rewrite ltnn.
+move/and3P => [xLw yLh /forallP Hf].
+have yLho : y < nhorizontal by apply: ltn_trans yLh _.
+by have /eqP-> := Hf (Ordinal yLho); rewrite ltnn.
 Qed.
 
 Lemma cmove_lt s x y z : cmove s x y -> z < y -> cell s x z.
 Proof.
 move/and3P => [xLw yLh /forallP Hf] zLy.
-by have /eqP-> := Hf (Ordinal (ltn_trans zLy yLh)).
+have zLho : z < nhorizontal by apply: ltn_trans zLy (ltn_trans yLh _).
+by have /eqP-> := Hf (Ordinal zLho).
 Qed.
 
-Lemma cmove_ge s x y z : cmove s x y -> y <= z < nheight -> ~~ cell s x z.
+Lemma cmove_ge s x y z : cmove s x y -> y <= z < nhorizontal -> ~~ cell s x z.
 Proof.
 move/and3P => [xLw yLh /forallP Hf] /andP[yLz zLh].
 by have /eqP-> /= := Hf (Ordinal zLh); rewrite ltnNge yLz.
 Qed.
 
-Lemma cmoveE s x y : cmove s x y -> y = 
+Lemma addK m n : (m + n) - n = m.
+Proof. ring. Qed.
+
+Lemma subK m n : (m - n) + n = m.
+Proof. ring. Qed.
+
+Lemma incrK m : decr (incr m) = m.
+Proof. by apply: addK. Qed.
+
+Lemma decrK m : incr (decr m) = m.
+Proof. by apply: subK. Qed.
+
+Lemma up_log2E x y : 
+  2 ^ (to_nat y).-1 <= to_nat x < 2 ^ (to_nat y) -> up_log2 x = y.
+Proof.
+rewrite /up_log2; case: eqP => [->|xDz]; first by rewrite leqNgt expn_gt0.
+case: nltbP (to_nat_decr y); last by case: (to_nat y) => //=; case: (to_nat x).
+move=> y_gt0 He Hx.
+by rewrite -[y]decrK; congr incr; apply: log2E; rewrite He // prednK.
+Qed.
+
+Lemma nheighLwB : nheight < nwB.
+Proof.
+apply: ltn_trans (_ : 2 ^ 6 < _); first by [].
+by rewrite nwB_pow ltn_exp2l.
+Qed.
+
+Lemma get_columnE s x :
+  x < nwidth ->
+  to_nat (get_column s (of_nat x)) = \sum_(i < nhorizontal)  cell s x i * 2 ^ i.
+Proof.
+move=> xLw.
+rewrite to_nat_sum.
+have hLd : nhorizontal <= ndigits by [].
+rewrite (big_ord_widen _ 
+          (fun i => cell s x i * 2 ^ i)%N (isT: nhorizontal <= ndigits)).
+rewrite [RHS]big_mkcond.
+apply: eq_bigr => /= i _.
+case: nltbP (bit_get_column0 s (of_nat x) (of_nat i));
+    (rewrite of_natK; last by apply: leq_trans (ltn_ord i) ndigitsLwB).
+  by move=> H /(_ isT) ->; rewrite ifN // -leqNgt.
+move/negP; rewrite -leqNgt -ltnS.
+rewrite ltnS -[to_nat height]/nheight => iLh _.
+by rewrite ifT // -cell_get_column.
+Qed.
+
+Lemma cmove0l s x : cmove s x 0 -> get_column s (of_nat x) = 0.
+Proof.
+move=> /and3P[xLw yLh /forallP /= Hf]; apply/to_nat_inj.
+rewrite get_columnE // big1 //= => i _.
+by have /eqP-> := Hf i; rewrite ltn0.
+Qed.
+
+Lemma cmoveE s x y : 
+  cmove s x y -> y = to_nat (up_log2 (get_column s (of_nat x))).
+Proof.
+move=> Hc; have /and3P[xLw yLh /forallP Hp] := Hc.
+have yLwB : y < nwB by apply: ltn_trans nheighLwB.
+have yLho : y < nhorizontal by apply: ltn_trans yLh _.
+rewrite -(of_natK _ yLwB); congr (to_nat _).
+have [yE0|yNE0] := (y =P 0%N); first by rewrite  yE0 cmove0l // -yE0.
+apply/sym_equal/up_log2E.
+have -> : to_nat (get_column s (of_nat x)) = 
+          \sum_(i < nhorizontal)  (i < y) * 2 ^ i.
+  rewrite get_columnE //.
+  by apply: eq_bigr => /= i _; rewrite (eqP (Hp i)).
+rewrite of_natK //; apply/andP; split.
+  have y1Lh : y.-1 < nhorizontal by apply: leq_ltn_trans (leq_pred _) _.
+  rewrite (bigD1 (Ordinal y1Lh)) ?prednK ?leqnn ?mul1n ?leq_addr //=.
+  by case: (y) yNE0.
+suff -> : \sum_(i < nhorizontal)  (i < y) * 2 ^ i = \sum_(i < y) 2 ^ i.
+  by apply: sum_pow2.
+rewrite (big_ord_widen _ _ (ltnW yLho)).
+by rewrite [RHS]big_mkcond /=; apply: eq_bigr => i; case: leqP; rewrite ?mul1n.
+Qed.
+
 (*
 
 Fixpoint make_columns i column :=
