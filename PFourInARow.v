@@ -956,6 +956,22 @@ have ->// := to_nat_add_exclude nwidth xpredT
 by move=> j k l jLw kLw _ _; apply: bit_get_column_exclude.
 Qed.
 
+Lemma wf_state_cell s x y z : 
+  wf_state s -> x < nwidth -> y < nhorizontal -> z < y -> cell s x y -> cell s x z.
+Proof.
+move=> /forallP/(_ (of_nat x)) /= sWf xLw yLh zLy.
+rewrite !cell_get_column //; last by apply: ltn_trans yLh. 
+case: eqP sWf => [->|col_neq0 /andP[oxLw]]; first by rewrite bit_0.
+rewrite opzsE // => /existsP[/= u /andP[/nlebP uLh /eqP] ->].
+have uLd : u <? digits.
+  by case: nltbP => // [] []; apply: leq_ltn_trans (isT : nheight < ndigits).
+rewrite !bit_decr //.
+have yLwB : y < nwB by apply: ltn_trans nhorizontalLwB.
+have zLwB : z < nwB by apply: ltn_trans yLwB.
+(do 2 case: nltbP); rewrite of_natK // of_natK // => nzLu yLu; case: nzLu.
+by apply: ltn_trans yLu.
+Qed.
+
 Lemma bit_le i j : (i <? (lsl one j)) -> bit i j = false.
 Proof.
 have iB := to_Z_bounded i.
@@ -1489,6 +1505,10 @@ Qed.
 (*
 Definition get_border (wstate bstate : int) :=
   bottom + (wstate lor bstate).
+*)
+
+
+(*
 
 (* Perform a move *)
 Definition  make_move move state := move lor state.
@@ -1619,6 +1639,77 @@ rewrite (big_ord_widen _ _ (ltnW yLho)).
 by rewrite [RHS]big_mkcond /=; apply: eq_bigr => i; case: leqP; rewrite ?mul1n.
 Qed.
 
+Lemma sum_pow_incr_lt b f n : 
+  1 < b -> (forall j k, j < k < n -> f j < f k) -> 
+  \sum_(i < n) b ^ (f i) < b ^ (f n.-1).+1.
+Proof.
+move=> b_gt1; elim: n => [|[|n] IH f_incr].
+- by rewrite big_ord0 expn_gt0 ltnW.
+- by rewrite big_ord1 /= expnS -[X in X < _]mul1n ltn_mul2r expn_gt0 b_gt1 ltnW.
+rewrite big_ord_recr /=.
+apply: leq_trans (_ : (b ^ (f n.+1)).*2 <= _); last first.
+  by rewrite -mul2n expnS leq_mul2r b_gt1 orbT.
+rewrite -addnn ltn_add2r (leq_trans (IH _)) //.
+  by move=> j k /andP[jLk kLn]; rewrite f_incr // jLk ltnW.
+by rewrite leq_exp2l // f_incr //= !leqnn.
+Qed.
+
+Lemma sum_pow_incr_div b k f n : 
+  1 < b -> (forall j k, j < k < n -> f j < f k) -> 
+  (\sum_(i < n) b ^ (f i)) %/ b ^ k = \sum_(i < n) b ^ (f i) %/ b ^ k.
+Proof.
+move=> b_gt1; elim: n => [|n IH f_incr].
+  by rewrite !big_ord0 div0n.
+have [kLf|fLk] := leqP k (f n).
+  rewrite !big_ord_recr /=.
+  rewrite -(subnK kLf) expnD divnDMl //; last by rewrite expn_gt0 ltnW.
+  rewrite mulnK ?expn_gt0 1?ltnW // IH // => j1 k1 /andP[jLk1 k1Ln].
+  by apply: f_incr; rewrite jLk1 ltnW.
+rewrite [RHS]big1 => /= [|i _].
+  rewrite divn_small // (leq_trans (sum_pow_incr_lt _ _ _ _ _)) //.
+  by rewrite leq_exp2l.
+rewrite divn_small // ltn_exp2l // (leq_ltn_trans _ fLk) //.
+have [iLn|nLi|->//]:= ltngtP i n.
+  by rewrite ltnW // f_incr // iLn leqnn.
+by have := ltn_ord i; rewrite leqNgt ltnS nLi.
+Qed.
+
+Lemma sum_pow_incr_div_mod f b k n : 
+  1 < b -> (forall j k, j < k < n -> f j < f k) -> 
+  (\sum_(i < n) b ^ (f i)) %/ b ^ k =  
+    (k \in  [seq f x | x <- iota 0 n]) %[mod b].
+Proof.
+move=> b_gt1 f_incr.
+rewrite sum_pow_incr_div //.
+elim: n f_incr => [|n IH f_incr]; first by rewrite !big_ord0.
+rewrite -[in RHS]addn1 iotaD map_cat mem_cat /= inE add0n.
+rewrite !big_ord_recr /=.
+have [kLf|fLk|->] := ltngtP k (f n); rewrite ?(orbF, orbT).
+- rewrite -(subnK (ltnW kLf)) expnD mulnK ?expn_gt0 1?ltnW //.
+  rewrite -[(f n - k)%N]prednK ?subn_gt0 //.
+  rewrite -modnDmr expnS modnMr addn0.
+  apply: IH => j1 k1 /andP[j1Lk1 k1Ln]; apply: f_incr.
+  by rewrite j1Lk1 ltnS ltnW.
+- rewrite divn_small ?ltn_exp2l // addn0.
+  apply: IH => j1 k1 /andP[j1Lk1 k1Ln]; apply: f_incr.
+  by rewrite j1Lk1 ltnS ltnW.
+rewrite divnn expn_gt0 1?ltnW //= big1 => // i _.
+by rewrite divn_small // ltn_exp2l ?f_incr // ltn_ord leqnn.
+Qed.
+
+Lemma cmoveE1 s x (y := to_nat (up_log2 (get_column s (of_nat x)))) : 
+  wf_state s -> x < nwidth -> y < nheight -> cmove s x y.
+Proof.
+move=> sWf xLw yLh; apply/and3P; split => //; apply/forallP => /= z; apply/eqP.
+have zLnwB : z < nwB by apply: ltn_trans nhorizontalLwB.
+have := wf_state_opzs _ (of_nat x) sWf.
+rewrite cell_get_column // opzsE' // => /andP[uLh /eqP ->].
+case: nlebP uLh => // uLh _.
+rewrite bit_decr; last first.
+  by case: nltbP => // [] []; apply: leq_ltn_trans (_ : nheight < ndigits).
+by case: nltbP; rewrite -/y of_natK //; case: ltngtP.
+Qed.
+
 (*
 
 Fixpoint make_columns i column :=
@@ -1645,36 +1736,115 @@ rewrite 3!to_nat_lslW to_nat_add; last by rewrite addnC.
 by rewrite expnD mulnA modnMml.
 Qed.
 
+Lemma lslC x m n : lsl (lsl x m) n = lsl (lsl x n) m.
+Proof.
+apply: to_Z_inj.
+rewrite !lsl_spec !Zmult_mod_idemp_l.
+by rewrite -Zmult_assoc [(2 ^ _ * _)%Z]Zmult_comm Zmult_assoc.
+Qed.
+
 Lemma columns_val i : 
   i < nwidth -> nth 0 columns i = lsl first_column (of_nat i * horizontal).
 Proof.
 move=> iLw.
 have: i * nhorizontal < nwB by apply: ltn_trans nwihoLwB; rewrite ltn_mul2r.
 have -> : columns = make_columns nwidth first_column by [].
-have {1}-> : first_column = lsl first_column (of_nat 0 * horizontal).
+move: iLw.
+elim: {-2}nwidth (leqnn nwidth) i first_column  => //= w IH HL [|i] f.
   by rewrite lsl0_r.
-have {1 3}-> : i = (0 + i)%N by [].
-move: 0%nat => j.
-elim: nwidth i j iLw  => //= w IH [|i] j; first by rewrite addn0.
-rewrite ltnS => iLw ijLw /=.
+rewrite ltnS => iLw i1hLwb; rewrite [LHS]/= IH //; last 2 first.
+- by rewrite ltnW.
+- by rewrite (leq_ltn_trans _ i1hLwb) // leq_mul2r leqnSn orbT.
+have iLwB : i < nwB by rewrite (ltn_trans _ nwidthLwB) // (ltn_trans iLw).
 rewrite -lsl_add_distl.
-  have -> : of_nat j * horizontal + horizontal = of_nat (j.+1) * horizontal.
-    have ->: of_nat j.+1 = of_nat j + 1.
-      apply: to_nat_inj.
-    rewrite -addn1.
-Search lsl (_ + _).
-rewrite IH.
-rewrite [in LHS]/=.
-by [].
-  case => //. 
+  have -> : of_nat i.+1 = 1 + of_nat i.
+    apply: to_nat_inj; rewrite to_nat_add !of_natK //.
+      by rewrite (leq_ltn_trans _ nwidthLwB) // (ltn_trans iLw).
+    by rewrite add1n (leq_ltn_trans _ nwidthLwB) // (ltn_trans _ HL).
+  by rewrite mul_add_distr_r mul_1_l.
+rewrite to_nat_mul; last first.
+  by rewrite of_natK // (ltn_trans _ i1hLwb) // ltn_mul2r ltnS leqnn.
+by rewrite addnC -mulSn of_natK.
+Qed.
 
+Lemma is_zeronE n : is_zero n = (to_nat n == 0%N).
+Proof. by apply/neqbP/idP => /eqP. Qed.
 
-elim: nwidth i first_column=> [[]//|w IH [|i]/=].
-rewrite lsl0_r.
-Search lsl 0.
-Search lsl.
+Lemma bitE w i : bit w i = (to_nat w %/ 2 ^ to_nat i == 1 %[mod 2]).
+Proof.
+rewrite /bit is_zeronE to_nat_lslW to_nat_lsr.
+set w1 := _ %/ _.
+have -> : 2 ^ to_nat (digits - 1) = 2 ^ ndigits.-1 by [].
+rewrite nwB_pow (divn_eq w1 2) mulnDl -mulnA -expnS prednK //.
+do 2 rewrite -modnDml modnMl add0n.
+case: (_ %% 2) (ltn_pmod w1 (isT : 0 < 2)) => [|[|n]].
+- by rewrite mul0n mod0n.
+- by rewrite mul1n modn_small ?expn_eq0 ?ltn_exp2l?prednK.
+by rewrite 2!ltnS ltn0 => H; case: notF.
+Qed.
 
-
+Lemma get_border_correct w b i j : 
+  wf_state (w lor b) ->
+  i < nwidth -> j < nheight -> cell (get_border w b) i j = cmove (w lor b) i j.
+Proof.
+set wb := _ lor _ => wf_wb iLw jLh.
+rewrite /cell /get_border bitE wf_state_button -/wb //.
+set ss := _ %% 2.
+suff -> : ss =  (j == to_nat (up_log2 (get_column wb (of_nat i)))).
+  move: jLh; have [->|nP] /= := (j =P _) => jLh.
+    by apply/sym_equal/idP/cmoveE1.
+  by apply/sym_equal/idP => /= /cmoveE.
+rewrite {}/ss.
+under eq_bigr do rewrite -expnD.
+pose f i := (to_nat (up_log2 (get_column wb (of_nat i))) + i * nhorizontal)%N.
+rewrite (sum_pow_incr_div_mod f) /f //; last first.
+  move=> j1 k1 /andP[j1Lk1 k1Lw].
+  have := wf_state_opzs _ (of_nat j1) wf_wb.
+  rewrite opzsE' //; case: nlebP => // uLh _.
+  apply: leq_trans (_ : j1.+1 * nhorizontal <= _).
+    by rewrite mulSn ltn_add2r.
+  apply: leq_trans (_ : k1 * nhorizontal <= _); last by apply: leq_addl.
+  by rewrite leq_mul2r j1Lk1 orbT.
+rewrite modn_small; last by case: (_ \in _).
+rewrite to_nat_add //; last first.
+  rewrite to_nat_mul; last first.
+    rewrite of_natK; last by apply: ltn_trans nwidthLwB.
+    by apply: leq_trans (ltnW nwihoLwB); rewrite ltn_mul2r.
+  rewrite of_natK; last by apply: ltn_trans nwidthLwB.
+  rewrite of_natK; last by apply: ltn_trans nheighLwB.
+  apply: leq_trans (_ : i.+1 * nhorizontal <= _).
+    by rewrite mulSn addnC ltn_add2r (ltn_trans jLh).
+  by apply: leq_trans (ltnW nwihoLwB); rewrite leq_mul2r.
+rewrite to_nat_mul; last first.
+  rewrite of_natK; last by apply: ltn_trans nwidthLwB.
+  by apply: leq_trans (ltnW nwihoLwB); rewrite ltn_mul2r.
+rewrite of_natK; last by apply: ltn_trans nwidthLwB.
+rewrite of_natK; last by apply: ltn_trans nheighLwB.
+rewrite addnC.
+congr (nat_of_bool _); apply/mapP/eqP => [[x]|->]; last first.
+  by exists i; rewrite ?mem_iota.
+rewrite mem_iota add0n => /andP[_ xLw] H.
+have [iLx|xLi|xEi] := ltngtP i x; last first.
+- by have /eqP := H; rewrite xEi eqn_add2r => /eqP.
+- suff : (to_nat (up_log2 (get_column wb (of_nat x))) + x * nhorizontal
+          < j + i * to_nat horizontal)%N.
+    by rewrite -H ltnn.
+  apply: leq_trans (_ : x.+1 * to_nat horizontal <= _).
+    rewrite mulSn ltn_add2r.
+    have := wf_state_opzs _ (of_nat x) wf_wb.
+    rewrite opzsE' //; case: nlebP => // uLh _.
+    apply: leq_trans (_ : i * nhorizontal <= _).
+      by rewrite leq_mul2r.
+    by apply: leq_addl.
+suff : (j + i * to_nat horizontal < 
+        to_nat (up_log2 (get_column wb (of_nat x))) + x * nhorizontal)%N.
+  by rewrite -H ltnn.
+apply: leq_trans (_ : i.+1 * to_nat horizontal <= _).
+  by rewrite mulSn ltn_add2r // (leq_trans jLh).
+apply: leq_trans (_ : x * to_nat horizontal <= _).
+  by rewrite leq_mul2r iLx orbT.
+by apply: leq_addl.
+Qed.
 
 (*
 Section FindMoves.
