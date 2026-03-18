@@ -922,7 +922,7 @@ apply: leq_sum => j _.
 case: ltnP => nLj; first by case: bit; rewrite (mul0n, mul1n).
 rewrite bit_get_column0 //.
 case: nltbP => //.
-by rewrite of_natK // (leq_trans (ltn_ord _)) // ndigitsLwB.
+by rewrite of_natK // (leq_trans (ltn_ord _)) // (ltnW ndigitsLwB).
 Qed.
 
 Lemma wf_state_to_natE w : 
@@ -1584,7 +1584,7 @@ move=> y_gt0 He Hx.
 by rewrite -[y]decrK; congr incr; apply: log2E; rewrite He // prednK.
 Qed.
 
-Lemma nheighLwB : nheight < nwB.
+Lemma nheightLwB : nheight < nwB.
 Proof.
 apply: ltn_trans (_ : 2 ^ 6 < _); first by [].
 by rewrite nwB_pow ltn_exp2l.
@@ -1602,7 +1602,7 @@ rewrite (big_ord_widen _
 rewrite [RHS]big_mkcond.
 apply: eq_bigr => /= i _.
 case: nltbP (bit_get_column0 s (of_nat x) (of_nat i));
-    (rewrite of_natK; last by apply: leq_trans (ltn_ord i) ndigitsLwB).
+    (rewrite of_natK; last by apply: leq_trans (ltn_ord i) (ltnW ndigitsLwB)).
   by move=> H /(_ isT) ->; rewrite ifN // -leqNgt.
 move/negP; rewrite -leqNgt -ltnS.
 rewrite ltnS -[to_nat height]/nheight => iLh _.
@@ -1620,7 +1620,7 @@ Lemma cmoveE s x y :
   cmove s x y -> y = to_nat (up_log2 (get_column s (of_nat x))).
 Proof.
 move=> Hc; have /and3P[xLw yLh /forallP Hp] := Hc.
-have yLwB : y < nwB by apply: ltn_trans nheighLwB.
+have yLwB : y < nwB by apply: ltn_trans nheightLwB.
 have yLho : y < nhorizontal by apply: ltn_trans yLh _.
 rewrite -(of_natK _ yLwB); congr (to_nat _).
 have [yE0|yNE0] := (y =P 0%N); first by rewrite  yE0 cmove0l // -yE0.
@@ -1811,7 +1811,7 @@ rewrite to_nat_add //; last first.
     rewrite of_natK; last by apply: ltn_trans nwidthLwB.
     by apply: leq_trans (ltnW nwihoLwB); rewrite ltn_mul2r.
   rewrite of_natK; last by apply: ltn_trans nwidthLwB.
-  rewrite of_natK; last by apply: ltn_trans nheighLwB.
+  rewrite of_natK; last by apply: ltn_trans nheightLwB.
   apply: leq_trans (_ : i.+1 * nhorizontal <= _).
     by rewrite mulSn addnC ltn_add2r (ltn_trans jLh).
   by apply: leq_trans (ltnW nwihoLwB); rewrite leq_mul2r.
@@ -1819,7 +1819,7 @@ rewrite to_nat_mul; last first.
   rewrite of_natK; last by apply: ltn_trans nwidthLwB.
   by apply: leq_trans (ltnW nwihoLwB); rewrite ltn_mul2r.
 rewrite of_natK; last by apply: ltn_trans nwidthLwB.
-rewrite of_natK; last by apply: ltn_trans nheighLwB.
+rewrite of_natK; last by apply: ltn_trans nheightLwB.
 rewrite addnC.
 congr (nat_of_bool _); apply/mapP/eqP => [[x]|->]; last first.
   by exists i; rewrite ?mem_iota.
@@ -1900,11 +1900,627 @@ Proof.
 by case: columns.
 Qed.
 
+(* Number of free cells *)
+Definition ncells s := \sum_(i < nwidth) \sum_(j < nheight) (~~ cell s i j).
+
+Definition empty_state := 0.
+
+Lemma ncells_empty_state : ncells empty_state = (nwidth * nheight)%N.
+Proof.
+rewrite /ncells; under eq_bigr do under eq_bigr do rewrite /cell bit_0.
+under eq_bigr do rewrite sum_nat_const /= card_ord muln1.
+by rewrite sum_nat_const /= card_ord.
+Qed.
+
+Lemma leq_ncells s1 s2 : 
+  (forall i j, i < nwidth -> j < nheight -> cell s1 i j -> cell s2 i j) ->
+   ncells s2 <= ncells s1.
+Proof.
+move=> cell_le; apply: leq_sum => /= i _; apply: leq_sum => /= j _.
+have := cell_le i j (ltn_ord _) (ltn_ord _).
+by (do 2 case: cell) => //= /(_ isT).
+Qed.
+
+Lemma leq_ncells_lorl s1 s2 : ncells (s1 lor s2) <= ncells s1.
+Proof.
+by apply: leq_ncells => i j iLw jLh; rewrite cell_lor; case: cell.
+Qed.
+
+Lemma leq_ncells_lorr s1 s2 : ncells (s1 lor s2) <= ncells s2.
+Proof.
+by apply: leq_ncells => i j iLw jLh; rewrite cell_lor; do 2 case: cell.
+Qed.
+
+Lemma cell_land s1 s2 i j : cell (s1 land s2) i j = cell s1 i j && cell s2 i j.
+Proof. by rewrite /cell land_spec. Qed.
+
+Lemma leq_ncells_landl s1 s2 : ncells s1 <= ncells (s1 land s2).
+Proof. by apply: leq_ncells => i j iLw jLh; rewrite cell_land; case: cell. Qed.
+
+Lemma leq_ncells_landr s1 s2 : ncells s2 <= ncells (s1 land s2).
+Proof. by apply: leq_ncells => i j iLw jLh; rewrite cell_land; case: cell. Qed.
+
+Lemma ltn_ncells i j s1 s2 : 
+  (forall i j, i < nwidth -> j < nheight -> cell s1 i j -> cell s2 i j) ->
+   i < nwidth -> j < nheight -> ~~ cell s1 i j -> cell s2 i j ->
+  ncells s2 < ncells s1.
+Proof.
+move=> le_cell iLw jLh nCs1ij Cs2ij.
+rewrite /ncells (bigD1 (Ordinal iLw)) //= [X in _ < X](bigD1 (Ordinal iLw)) //=.
+set ss1 := (X in X + _ < _); set ss2 := (X in _ < X + _).
+set ss3 := (X in _ + X < _); set ss4 := (X in _ < _ + X).
+apply: leq_trans (_ : ss2 + ss3 <= _).
+  rewrite ltn_add2r /ss1 /ss2.
+  rewrite (bigD1 (Ordinal jLh)) //= [X in _ < X](bigD1 (Ordinal jLh)) //=.
+  rewrite nCs1ij Cs2ij ltnS add0n.
+  apply: leq_sum => /= k _.
+  have := le_cell i k iLw (ltn_ord _).
+  by (do 2 case: cell) => //= /(_ isT).
+rewrite leq_add2l; apply: leq_sum => /= k _; apply: leq_sum => /= l _.
+have := le_cell k l (ltn_ord _) (ltn_ord _).
+by (do 2 case: cell) => //= /(_ isT).
+Qed.
+
+Definition has_move s := 
+  [exists i : 'I_nwidth, exists j : 'I_nheight, cmove s i j].
+
+Lemma ncells_has_move s : has_move s <= ncells s.
+Proof.
+rewrite /has_move; case: existsP => [[/= x /existsP[/= y Csxy]]|//].
+by rewrite /ncells (bigD1 x) //= (bigD1 y) //= cmove_cell.
+Qed.
+
+Definition WIN := to_nat win.
+
+Definition LOSS := to_nat loss.
+Definition DRAW := to_nat draw.
+Definition UNKNOWN := to_nat unknown.
+Definition wcomp w := (WIN + LOSS - w)%N.
+
+Lemma wcompWIN : wcomp WIN = LOSS.
+Proof. by []. Qed.
+
+Lemma wcompLOSS : wcomp LOSS = WIN.
+Proof. by []. Qed.
+
+Lemma wcompDRAW : wcomp DRAW = DRAW.
+Proof. by []. Qed.
+
+Definition make_move s i j :=  s lor (lsl 1 (of_nat i * horizontal + of_nat j)).
+
+Lemma bit_onenn m n : 
+  m <? digits -> n <? digits -> bit (lsl one m) n = (m == n).
+Proof.
+move=> /nltbP mLd /nltbP nLd.
+rewrite /bit is_zeronE to_nat_lslW to_nat_lsr to_nat_lsl_one //.
+rewrite to_nat_sub  ?ndigitsLwB // subn1.
+have [mLn|nLm|mEn] := ltngtP (to_nat m) (to_nat n).
+- rewrite divn_small ?mod0n ?eqxx ?ltn_exp2l //.
+  by apply/sym_equal/idP=> /eqP mEn; rewrite mEn ltnn in mLn.
+- rewrite -[in LHS](subnK (ltnW nLm)) expnD mulnK ?expn_gt0 // -expnD.
+  have /subnK<- : ndigits <= to_nat m - to_nat n + ndigits.-1.
+    by rewrite -{1}(@prednK ndigits) // -add1n leq_add2r subn_gt0.
+  rewrite expnD nwB_pow modnMl eqxx.
+  by apply/sym_equal/idP=> /eqP mEn; rewrite mEn ltnn in nLm.
+rewrite mEn divnn expn_gt0 mul1n modn_small; last by rewrite nwB_pow ltn_exp2l.
+rewrite expn_eq0 -ltnS prednK //.
+by apply/sym_equal/idP/neqbP.
+Qed.
+
+Lemma cell_make_movel s i j : 
+  i < nwidth -> j < nhorizontal -> cell (make_move s i j) i j.
+Proof.
+move=> iLw jLh.
+have iLwB : i < nwB by apply: ltn_trans nwidthLwB.
+have jLwB : j < nwB by apply: ltn_trans nhorizontalLwB.
+have ihLwB : i * nhorizontal < nwB.
+  by rewrite (leq_ltn_trans _ nwihoLwB) // leq_mul2r ltnW.
+have ijLwB : i * nhorizontal + j < nwB.
+  rewrite (leq_ltn_trans _ nwihoLwB) //.
+  rewrite -(@prednK nwidth) // mulSn addnC.
+  by rewrite leq_add ?(leq_trans (ltnW jLh)) // leq_mul2r.
+have HE : to_nat (of_nat i * horizontal + of_nat j) = (i * nhorizontal + j)%N.
+  rewrite to_nat_add //; last by rewrite to_nat_mul ?of_natK.
+  by rewrite of_natK // to_nat_mul ?of_natK.
+suff HL : of_nat i * horizontal + of_nat j <? digits.
+  by rewrite /make_move cell_lor /cell bit_onenn ?eqxx ?orbT.
+apply/nltbP/(leq_ltn_trans _ (_ : nwidth * nhorizontal < _)) => //.
+rewrite HE -(@prednK nwidth) // mulSn addnC.
+by rewrite leq_add ?(leq_trans (ltnW jLh)) // leq_mul2r.
+Qed.
+
+Lemma cell_make_mover s i1 i2 j1 j2 : 
+  i1 < nwidth -> j1 < nhorizontal -> i2 < nwidth -> j2 < nhorizontal ->
+ ((i1 != i2) || (j1 != j2)) ->
+  cell (make_move s i1 j1) i2 j2 = cell s i2 j2.
+Proof.
+move=> i1Lw j1Lh i2Lw j2Lh i1Di2Oj1Dj2.       
+have i1LwB : i1 < nwB by apply: ltn_trans nwidthLwB.
+have j1LwB : j1 < nwB by apply: ltn_trans nhorizontalLwB.
+have i1hLwB : i1 * nhorizontal < nwB.
+  by rewrite (leq_ltn_trans _ nwihoLwB) // leq_mul2r ltnW.
+have i1j1LwB : i1 * nhorizontal + j1 < nwB.
+  rewrite (leq_ltn_trans _ nwihoLwB) //.
+  rewrite -(@prednK nwidth) // mulSn addnC.
+  by rewrite leq_add ?(leq_trans (ltnW j1Lh)) // leq_mul2r.
+have HE1 : to_nat (of_nat i1 * horizontal + of_nat j1) = 
+                  (i1 * nhorizontal + j1)%N.
+  rewrite to_nat_add //; last by rewrite to_nat_mul ?of_natK.
+  by rewrite of_natK // to_nat_mul ?of_natK.
+have HL1 : of_nat i1 * horizontal + of_nat j1 <? digits.
+  apply/nltbP/(leq_ltn_trans _ (_ : nwidth * nhorizontal < _)) => //.
+  rewrite HE1 -(@prednK nwidth) // mulSn addnC.
+  by rewrite leq_add ?(leq_trans (ltnW j1Lh)) // leq_mul2r.
+have i2LwB : i2 < nwB by apply: ltn_trans nwidthLwB.
+have j2LwB : j2 < nwB by apply: ltn_trans nhorizontalLwB.
+have i2hLwB : i2 * nhorizontal < nwB.
+  by rewrite (leq_ltn_trans _ nwihoLwB) // leq_mul2r ltnW.
+have i2j2LwB : i2 * nhorizontal + j2 < nwB.
+  rewrite (leq_ltn_trans _ nwihoLwB) //.
+  rewrite -(@prednK nwidth) // mulSn addnC.
+  by rewrite leq_add ?(leq_trans (ltnW j2Lh)) // leq_mul2r.
+have HE2 : to_nat (of_nat i2 * horizontal + of_nat j2) =
+             (i2 * nhorizontal + j2)%N.
+  rewrite to_nat_add //; last by rewrite to_nat_mul ?of_natK.
+  by rewrite of_natK // to_nat_mul ?of_natK.
+have HL2 : of_nat i2 * horizontal + of_nat j2 <? digits.
+  apply/nltbP/(leq_ltn_trans _ (_ : nwidth * nhorizontal < _)) => //.
+  rewrite HE2 -(@prednK nwidth) // mulSn addnC.
+  by rewrite leq_add ?(leq_trans (ltnW j2Lh)) // leq_mul2r.
+rewrite /make_move cell_lor /cell bit_onenn ?eqxx ?orbT //.
+suff /negPf-> : of_nat i1 * horizontal + of_nat j1 !=
+                of_nat i2 * horizontal + of_nat j2 by rewrite orbF.
+apply/neqbP/eqP; rewrite HE1 HE2.
+case: eqP i1Di2Oj1Dj2 => [<-|i1Di2] /= j1Dj2; first by rewrite eqn_add2l.
+apply/eqP=> i1j1Di2j2.
+have [i1Li2|i2Li1|//] := ltngtP i1 i2.
+  suff : i1 * nhorizontal + j1 < i2 * nhorizontal + j2 by rewrite i1j1Di2j2 ltnn.
+  apply: leq_trans (leq_addr _ _).
+  apply: leq_trans (_ : i1.+1 * nhorizontal <= _).
+    by rewrite mulSn addnC ltn_add2r.
+  by rewrite leq_mul2r.
+suff : i2 * nhorizontal + j2 < i1 * nhorizontal + j1 by rewrite i1j1Di2j2 ltnn.
+apply: leq_trans (leq_addr _ _).
+apply: leq_trans (_ : i2.+1 * nhorizontal <= _).
+  by rewrite mulSn addnC ltn_add2r j2Lh.
+by rewrite leq_mul2r.
+Qed.
+
+Lemma ncells_cmove w b i j :
+  cmove (w lor b) i j -> 
+  ncells (w lor b) = (ncells (b lor make_move w i j)).+1.
+Proof.
+move=> cm.
+have /and3P[iLw jLh _] := (cm).
+have jLh' : j < nhorizontal by apply: leq_trans jLh _.
+pose i1 := Ordinal iLw; pose j1 := Ordinal jLh.
+rewrite /ncells [LHS](bigD1 i1) //= [in RHS](bigD1 i1) //= -addSn.
+congr (_ + _)%N; last first.
+  apply: eq_bigr => k kDj; apply: eq_bigr => l _.
+  have lLh' : l < nhorizontal by apply: leq_trans (ltn_ord _) _.
+  by rewrite 2!cell_lor cell_make_mover 1?orbC // orbC eq_sym kDj.
+rewrite [LHS](bigD1 j1) //= [in RHS](bigD1 j1) //=.
+have F1 : ~~ cell (w lor b) i j by apply: cmove_cell.
+have F2 : ~~ cell b i j.
+  by move: F1; rewrite cell_lor; case: (cell b _ _); case: cell.
+rewrite F1 cell_lor negb_or F2 cell_make_movel //= add1n add0n.
+congr (_).+1; apply: eq_bigr => k kDj.
+have kLh' : k < nhorizontal by apply: leq_trans (ltn_ord _) _.
+by rewrite 2!cell_lor cell_make_mover 1?orbC // eq_sym kDj.
+Qed.
+
+Fixpoint eval_aux (n : nat) w b := 
+  let s := w lor b in 
+  if cwin w then WIN else
+  if has_move s then
+    if n is n1.+1 then
+      \max_(i < nwidth) \max_(j < nheight | cmove s i j) 
+                wcomp (eval_aux n1 b (make_move w i j))
+    else UNKNOWN
+  else if cwin b then LOSS else DRAW.
+
+Definition eval w b := eval_aux (ncells (w lor b)) w b.
+
+Lemma evalS w b : 
+  eval w b = 
+  let s := w lor b in 
+  if cwin w then WIN else
+  if has_move s then
+      \max_(i < nwidth) \max_(j < nheight | cmove s i j) 
+                wcomp (eval b (make_move w i j))
+  else if cwin b then LOSS else DRAW.
+Proof.
+rewrite /eval; have := refl_equal (ncells (w lor b)).
+move: {-1}(ncells _)=> n; elim: n w b => /= [|n IH] w b nE.
+  case Ew: cwin => //; case Em: has_move => //.
+  by have := ncells_has_move (w lor b); rewrite nE Em.
+case Ew: cwin => //; case Em: has_move => //.
+apply: eq_bigr => i _; apply: eq_bigr => j Cij.
+congr (wcomp (eval_aux _ _ _)).
+by move: nE; rewrite (ncells_cmove _ _ _ _ Cij) => [] [].
+Qed.
+
+Lemma evalOr w b : [|| eval w b == WIN, eval w b == DRAW | eval w b == LOSS].
+Proof.
+move:  {-1}(ncells (w lor b)) (refl_equal (ncells (w lor b))).
+move=> n; elim: n w b => /= [|n IH] w b cE; rewrite evalS.
+  case: cwin => //=.
+  by have := ncells_has_move (w lor b); rewrite cE; case: has_move; case: cwin.
+case: cwin => //=.
+case E : has_move => //; last by case: cwin.
+set m := \max_(i < _) _.
+suff /or3P[/eqP->|/eqP->|/eqP->] : [|| m == WIN,  m == DRAW  | m == LOSS] by [].
+have /idP/existsP[/= i1/existsP[/= j1 Hj1]] := E.
+rewrite /m (bigD1 i1) //= (bigD1 j1) //=.
+set m1 := \max_(i < _ | _) _; set m2 := \max_(i < _ | _)  _.
+set m3 := eval _ _.
+have IH1 i k (P : nat -> _) : 
+    let m :=  \max_(j < k | cmove (w lor b) i j && P j)
+                    wcomp (eval b (make_move w i j)) in
+    [|| m == UNKNOWN,  m == WIN,  m == DRAW  | m == LOSS].
+  elim:  k => /= [|k IHk]; first by rewrite big_ord0.
+  rewrite big_mkcond /= big_ord_recr /=  -big_mkcond /=.
+  case E1 : (cmove _ _ _) => /=; last by rewrite maxn0.
+  have {E1}/idP E1 := E1.
+  case: (P k) => //=.
+  suff /IH/or3P[/eqP->|/eqP->|/eqP->] :
+       ncells (b lor (make_move w i k)) = n by case/or4P : IHk => /eqP->.
+  by have := ncells_cmove _ _ _ _ E1; rewrite cE => [] [].
+have : [|| m1 == UNKNOWN, m1 == WIN, m1 == DRAW  | m1 == LOSS].
+  by rewrite /= (IH1 i1 nheight (fun n => n != \val j1)).
+pose gf i := \max_(j < nheight | cmove (w lor b) i j )
+                    wcomp (eval b (make_move w i j)).
+have Hgf i : [|| gf i == UNKNOWN,  gf i == WIN,  gf i == DRAW  | gf i == LOSS].
+  pose f (j : 'I_nheight) := cmove (w lor b) i j && true.
+  rewrite /gf (eq_bigl f) => [|j]; first by apply: (IH1 i nheight xpredT).
+  by rewrite /f andbT.
+have IH2 k (P : nat -> _) : 
+    let m :=  \max_(i < k | P i) gf i in
+    [|| m == UNKNOWN,  m == WIN,  m == DRAW  | m == LOSS].
+  elim: k => /= [|k IHk]; first by rewrite big_ord0.
+  rewrite big_mkcond /= big_ord_recr /=  -big_mkcond /=.
+  by case: (P k); case/or4P : IHk => /eqP->//; 
+     case/or4P : (Hgf k) => /eqP ->.
+have : [|| m2 == UNKNOWN, m2 == WIN, m2 == DRAW  | m2 == LOSS].
+  by apply: (IH2 nwidth (fun n => n != i1)).
+have : [|| m3 == WIN, m3 == DRAW  | m3 == LOSS].
+  apply: IH.
+  by have := ncells_cmove _ _ _ _ Hj1; rewrite cE => [] [].
+by case/or3P => /eqP-> /or4P[]/eqP->/or4P[]/eqP->.
+Qed.
+
+Lemma eval_winP w b : 
+  reflect 
+  (cwin w \/ exists i j, cmove (w lor b) i j /\ eval b (make_move w i j) = LOSS)
+  (eval w b == WIN).
+Proof.
+pose f (i : 'I_nwidth) (j : 'I_nheight) := wcomp (eval b (make_move w i j)).
+pose g  (i : 'I_nwidth)  := \max_(j < nheight | cmove (w lor b) i j) f i j.
+apply: (iffP eqP) => [|[Hc|[i [j [Cij Eij]]]]]; last 2 first.
+- by rewrite evalS Hc.
+- rewrite evalS; case E : cwin => //=.
+  have iLw : i < nwidth by case/and3P: Cij.
+  have jLh : j < nheight by case/and3P: Cij.
+  have E1 : has_move (w lor b).
+    by apply/existsP; exists (Ordinal iLw); apply/existsP; exists (Ordinal jLh).
+  rewrite E1.
+  have := evalOr w b; rewrite evalS /= E E1.
+  set ss := \max_(_ < _) _ => Hss.
+  suff : WIN <= ss by case/or3P : Hss => /eqP->.
+  rewrite -[WIN]/(wcomp LOSS) -Eij.
+  apply: leq_trans (leq_bigmax (Ordinal iLw)).
+  by apply (@leq_bigmax_cond _ _ (f (Ordinal iLw)) (Ordinal jLh)).
+rewrite evalS; case E : cwin => /=; first by left.
+case E1 : has_move; last by case: cwin.
+case: (eq_bigmax g) => /= [|i -> Mi]; first by rewrite card_ord.
+case: (@eq_bigmax_cond _ (fun j : 'I_nheight => cmove (w lor b) i j) (f i)).
+  case E2 : #|(fun j : 'I_nheight => cmove (w lor b) i j)| => //.
+  move: Mi; rewrite /g big1 => //= j Cij.
+  by rewrite (cardD1 j)/in_mem /= Cij in E2.
+move => /= j; rewrite /in_mem /= => Cij maxE; right.
+exists i; exists j; split => //.
+rewrite -[LOSS]/(wcomp WIN) -Mi /g maxE /f.
+by case/or3P : (evalOr  b (make_move w i j)) => /eqP->.
+Qed.
+
+Lemma eval_lossP w b : 
+  reflect 
+  (~~ cwin w /\ 
+    (cwin b \/ 
+      has_move (w lor b) /\  
+      forall i j, cmove (w lor b) i j -> eval b (make_move w i j) = WIN))
+  (eval w b == LOSS).
+Proof.
+apply: (iffP eqP) => [|[NWw [Wb | [Mwb Hf]]]]; last 2 first.
+- rewrite evalS /= (negPf NWw) Wb.
+  case E : has_move => //.
+  case/existsP : E => /= i /existsP[/= j Cij].
+  apply/anti_leq/andP; split; last first.
+    rewrite (bigD1 i) //= (bigD1 j) //= evalS Wb /= wcompWIN.
+    apply: leq_trans (leq_maxl _ _).
+    by apply: leq_trans (leq_maxl _ _).
+  apply/bigmax_leqP => /= i1 _.
+  apply/bigmax_leqP => /= j1 _.
+  by rewrite evalS Wb /= wcompWIN.
+- rewrite evalS /= (negPf NWw) Mwb.
+  case/existsP : Mwb => /= i /existsP[/= j Cij].
+  apply/anti_leq/andP; split; last first.
+    rewrite (bigD1 i) //= (bigD1 j) //= Hf //= wcompWIN.
+    apply: leq_trans (leq_maxl _ _).
+    by apply: leq_trans (leq_maxl _ _).
+  apply/bigmax_leqP => /= i1 _.
+  apply/bigmax_leqP => /= j1 Ci1j1.
+  by rewrite Hf.
+rewrite evalS /=; case: cwin => //; case E : has_move => //=; last first.
+  by case: cwin => // _; split => //; left.
+move=> He; split => //.
+right; split => // i j Cij.
+have iLw : i < nwidth by case/and3P : Cij.
+have jLh : j < nheight by case/and3P : Cij.
+case/or3P : (evalOr b (make_move w i j)) => /eqP E1 //.
+  suff : DRAW <= LOSS by [].
+  rewrite -He (bigD1 (Ordinal iLw)) //= (bigD1 (Ordinal jLh)) //=.
+  rewrite E1 wcompDRAW.
+  apply: leq_trans (leq_maxl _ _).
+  by apply: leq_trans (leq_maxl _ _).
+suff : WIN <= LOSS by [].
+rewrite -He (bigD1 (Ordinal iLw)) //= (bigD1 (Ordinal jLh)) //=.
+rewrite E1 wcompLOSS.
+apply: leq_trans (leq_maxl _ _).
+by apply: leq_trans (leq_maxl _ _).
+Qed.
+
+Lemma eval_drawP w b : 
+  reflect 
+  [/\ ~~ cwin w, ~~ cwin b &
+      has_move (w lor b) -> 
+      (exists i j, cmove (w lor b) i j /\ eval b (make_move w i j) = DRAW) /\
+      (forall i j, cmove (w lor b) i j -> DRAW <= eval b (make_move w i j))]
+  (eval w b == DRAW).
+Proof.
+pose f (i : 'I_nwidth) (j : 'I_nheight) := wcomp (eval b (make_move w i j)).
+pose g  (i : 'I_nwidth)  := \max_(j < nheight | cmove (w lor b) i j) f i j.
+apply: (iffP eqP) => [|[NWw NWb HC]]; last first.
+- rewrite evalS /= (negPf NWw).
+  case: has_move HC => [/(_ isT) [[i [j [Cij Eij]] HE]] |]//; last first.
+    by rewrite (negPf NWb).
+  have iLw : i < nwidth by case/and3P : Cij.
+  have jLh : j < nheight by case/and3P : Cij.
+  apply/anti_leq/andP; split; last first.
+    rewrite (bigD1 (Ordinal iLw)) //= (bigD1 (Ordinal jLh)) //= Eij wcompDRAW.
+    apply: leq_trans (leq_maxl _ _).
+    by apply: leq_trans (leq_maxl _ _).
+  apply/bigmax_leqP => /= i1 _.
+  apply/bigmax_leqP => /= j1 Ci1j1.
+  have := HE _ _ Ci1j1.
+  by case/or3P : (evalOr b (make_move w i1 j1)) => /eqP ->.
+rewrite evalS /=; case E1 : cwin => //.
+case E2 : has_move => //=; last by case: cwin.
+move=> He.
+have F1 i j : cmove (w lor b) i j -> DRAW <= eval b (make_move w i j).
+  move=> Cij.
+  suff : wcomp (eval b (make_move w i j)) <= DRAW.
+    by case/or3P : (evalOr b (make_move w i j)) => /eqP ->.
+  rewrite -He.
+  have iLw : i < nwidth by case/and3P : Cij.
+  have jLh : j < nheight by case/and3P : Cij.
+  rewrite (bigD1 (Ordinal iLw)) //= (bigD1 (Ordinal jLh)) //=.
+  apply: leq_trans (leq_maxl _ _).
+  by apply: leq_trans (leq_maxl _ _).
+have [] := boolP [exists i : 'I_nwidth,
+                [exists j : 'I_nheight, cmove (w lor b) i j &&
+                                        (eval b (make_move w i j) == DRAW)]].
+  move=> /existsP[i /existsP[j /andP[Cij /eqP Eij]]]. 
+  split=> // [|_]; first by apply/negP => NWb; move: Eij; rewrite evalS /= NWb.
+  by split => //; exists i; exists j.
+rewrite negb_exists => /forallP /= HF.
+suff : DRAW <= LOSS by [].
+rewrite -He; apply/bigmax_leqP => /= i _; apply/bigmax_leqP => /= j Cij.
+have := F1 i j Cij.
+have := HF i; rewrite negb_exists => /forallP/(_ j).
+rewrite negb_and Cij /=.
+by case/or3P: (evalOr b (make_move w i j)) => /eqP->.
+Qed.
+
+Definition transpose s1 s2 := 
+  [forall i : 'I_nwidth, [forall j : 'I_nhorizontal, 
+     cell s1 i j == cell s2 (rev_ord i) j]].
+
+Lemma transposeP s1 s2 :
+  reflect (forall i j, i < nwidth -> j < nhorizontal -> 
+              cell s1 i j = cell s2 (nwidth - i.+1) j)
+           (transpose s1 s2).
+Proof.
+apply: (iffP forallP) => /= [H i j iLw jLh| H i].
+  by have/forallP/(_ (Ordinal jLh))/eqP := H (Ordinal iLw).
+by apply/forallP => j; rewrite H.
+Qed.
+
+Lemma transpose_sym s1 s2 : transpose s1 s2 = transpose s2 s1.
+Proof.
+by apply/transposeP/transposeP => H i j iLw jLh;
+   have /val_eqP/eqP/= HrK := rev_ordK (Ordinal iLw);
+   rewrite H ?HrK // (ltn_ord (rev_ord (Ordinal iLw))).
+Qed. 
+
+Lemma transpose_lor s1 s2 s3 s4 : 
+  transpose s1 s2 -> transpose s3 s4 -> transpose (s1 lor s3) (s2 lor s4).
+Proof.
+move=> /transposeP H1 /transposeP H2; apply/transposeP => i j iLw jLh.
+by rewrite !cell_lor H1 // H2.
+Qed.
+
+Lemma ncells_transpose s1 s2 : transpose s1 s2 -> ncells s1 = ncells s2.
+Proof.
+rewrite transpose_sym => /transposeP Ht; rewrite /ncells.
+pose f i := \sum_(j < nheight)  ~~ cell s1 i j.
+have <- := big_mkord xpredT f.
+rewrite big_nat_rev /= big_mkord /= add0n.
+apply: eq_bigr => i _; apply: eq_bigr => j _; rewrite Ht //.
+by apply: ltn_trans (ltn_ord j) _.
+Qed.
+
+Lemma cmove_transpose s1 s2 i j :
+  transpose s1 s2 -> i < nwidth -> cmove s1 i j = cmove s2 (nwidth - i.+1) j.
+Proof.
+have Hci s3 s4 i1 j1 :
+    transpose s3 s4 -> cmove s3 i1 j1 -> cmove s4 (nwidth - i1.+1) j1.
+  move=> /transposeP H1 /and3P[iLw jLw /forallP/= HC].
+  by rewrite /cmove ltn_subrL /= jLw /=; apply/forallP => z; rewrite -H1.
+move=> Ht iLw; apply/idP/idP => [|Cij]; first by apply: Hci.
+have -> : i = (nwidth -  (nwidth - i.+1).+1)%N by rewrite subnS subKn //.
+by apply: Hci Cij; rewrite transpose_sym.
+Qed.
+
+Lemma cwin_transpose s1 s2 : transpose s1 s2 -> cwin s1 = cwin s2.
+Proof.
+have Hhi s3 s4 : transpose s3 s4 -> hwin s3 -> hwin s4.
+  move=> /transposeP Ht.
+  move=> /existsP[/= i /existsP[/= j /and5P[Hc1 Hc2 Hc3 Hc4 Hc5]]].
+  apply/existsP; exists (rev_ord (Ordinal Hc1)); apply/existsP; exists j => /=.
+  have jLh' : j < nhorizontal by apply: ltn_trans (ltn_ord j) _.
+  apply/and5P; split => //.
+  - by rewrite -!subSn // ?subSS ?leq_subr // (leq_trans Hc1).
+  - by rewrite -Ht.
+  - rewrite subnS prednK; last by rewrite subn_gt0.
+    by rewrite -Ht // (leq_trans _ Hc1).
+  - rewrite 2!subnS !prednK; last 2 first.
+    - by rewrite subn_gt0 (leq_trans _ Hc1).
+    - by rewrite -subnS subn_gt0.
+    by rewrite -Ht // (leq_trans _ Hc1) // ltnW.
+  rewrite 3!subnS !prednK; last 3 first.
+  - by rewrite subn_gt0 (leq_trans _ Hc1) // ltnW // ltnW.
+  - by rewrite -subnS subn_gt0  (leq_trans _ Hc1).
+  - by rewrite -2!subnS subn_gt0  (leq_trans _ Hc1).
+  by rewrite -Ht // (leq_trans _ Hc1) // ltnW.
+have Hh s3 s4 : transpose s3 s4 -> hwin s3 = hwin s4.
+  by move=> Ht; apply/idP/idP; apply: Hhi => //; rewrite transpose_sym.
+have Hvi s3 s4 : transpose s3 s4 -> vwin s3 -> vwin s4.
+  move=> /transposeP Ht.
+  move=> /existsP[/= i /existsP[/= j /and5P[Hc1 Hc2 Hc3 Hc4 Hc5]]].
+  have j3Lh' : j.+3 < nhorizontal by apply: leq_trans Hc1 _.
+  apply/existsP; exists (rev_ord i); apply/existsP; exists j => /=.
+  apply/and5P; split; rewrite -1?Ht //.
+  - by rewrite ltnW // ltnW // ltnW.
+  - by rewrite ltnW // ltnW.
+  by rewrite ltnW.
+have Hv s3 s4 : transpose s3 s4 -> vwin s3 = vwin s4.
+  by move=> Ht; apply/idP/idP; apply: Hvi => //; rewrite transpose_sym.
+have Hudi s3 s4 : transpose s3 s4 -> uwin s3 -> dwin s4.
+  move=> /transposeP Ht.
+  move=> /existsP[/= i /existsP[/= j /and5P[Hc1 Hc2 Hc3 Hc4 /andP[Hc5 Hc6]]]].
+  apply/existsP; exists (rev_ord (Ordinal Hc1)).
+  apply/existsP; exists (Ordinal Hc2) => /=.
+  have j3Lh' : j.+3 < nhorizontal by apply: leq_trans Hc2 _.
+  apply/and5P; split => //.
+  - by rewrite -!subSn // ?subSS ?leq_subr // (leq_trans Hc1).
+  - by rewrite -Ht.
+  - rewrite subnS prednK; last by rewrite subn_gt0.
+    by rewrite -Ht // ltnW.
+  - rewrite 2!subnS !prednK; last 2 first.
+    - by rewrite subn_gt0 (leq_trans _ Hc1).
+    - by rewrite -subnS subn_gt0.
+    by rewrite -Ht // ltnW // ltnW.
+  rewrite 3!subnS !prednK; last 3 first.
+  - by rewrite subn_gt0 (leq_trans _ Hc1) // ltnW // ltnW.
+  - by rewrite -subnS subn_gt0  (leq_trans _ Hc1).
+  - by rewrite -2!subnS subn_gt0  (leq_trans _ Hc1).
+  by rewrite -Ht // ltnW // ltnW // ltnW.
+have Hdui s3 s4 : transpose s3 s4 -> dwin s3 -> uwin s4.
+  move=> /transposeP Ht.
+  move=> /existsP[/= i /existsP[/= j /and5P[Hc1 Hc2 Hc3 Hc4 /andP[Hc5 Hc6]]]].
+  apply/existsP; exists (rev_ord (Ordinal Hc1)).
+  have j3Lh : j.-2.-1 < nheight.
+    apply: leq_trans (ltn_ord j).
+    by case: (j : nat) => // [] [|[|j1]] //=; rewrite ltnS ltnW // ltnW.
+  have j_gt0 : 0 < j by apply: leq_trans Hc2.
+  have j1_gt0 : 0 < j.-1 by rewrite -subn1 subn_gt0 (leq_trans _ Hc2).
+  have j2_gt0 : 0 < j.-2 by rewrite -subn2 subn_gt0 (leq_trans _ Hc2).
+    apply/existsP; exists (Ordinal j3Lh) => /=.
+  have jLh' : j < nhorizontal by apply: leq_trans (ltn_ord j).
+  apply/and5P; split; [idtac|idtac|idtac|idtac|apply/andP; split] => //.
+  - by rewrite -!subSn // ?subSS ?leq_subr // (leq_trans Hc1).
+  - by rewrite !prednK.
+  - by rewrite -Ht // (leq_trans j3Lh).
+  - rewrite subnS prednK; last by rewrite subn_gt0.
+    rewrite -Ht //; first by rewrite prednK.
+    by apply: leq_trans Hc1.
+  - rewrite 2!subnS !prednK //; last 2 first.
+    - by rewrite subn_gt0 (leq_trans _ Hc1).
+    - by rewrite -subnS subn_gt0.
+    rewrite -Ht //; first by rewrite (leq_trans _ Hc1) // ltnW.
+    by rewrite prednK // (leq_trans (ltnW jLh')).
+  - rewrite subnS prednK; last by rewrite subn_gt0.
+    rewrite subnS prednK; last by rewrite subn_gt0 (leq_trans _ Hc1).
+    rewrite subnS prednK; last by rewrite subn_gt0 (leq_trans _ Hc1) // ltnW.
+    by rewrite !prednK // -Ht.
+have Hud s3 s4 : transpose s3 s4 -> uwin s3 = dwin s4.
+  by move=> Ht; apply/idP/idP => [/Hudi->|/Hdui->]; rewrite // transpose_sym.
+move=> Ht; rewrite /cwin (Hh _ _ Ht) (Hv _ _ Ht) (Hud _ _ Ht).
+rewrite -[dwin s1](@Hud s2 s1) 1?transpose_sym //.
+by case: hwin; case: vwin; case: dwin; case: uwin.
+Qed.
+
+Lemma has_move_transpose s1 s2 : transpose s1 s2 -> has_move s1 = has_move s2.
+Proof.
+suff Hhi s3 s4 : transpose s3 s4 -> has_move s3 -> has_move s4.
+  by move=> Ht; apply/idP/idP; apply: Hhi => //; rewrite transpose_sym.
+move=> Ht.
+move=> /existsP[/= i /existsP[/= j Hc]].
+apply/existsP; exists (rev_ord i); apply/existsP; exists j => /=.
+by rewrite -(cmove_transpose _ _ _ _ Ht).
+Qed.
+
+Lemma make_move_transpose s1 s2 i j :
+   transpose s1 s2 -> i < nwidth -> j < nheight ->
+   transpose (make_move s1 i j) (make_move s2 (nwidth - i.+1) j).
+Proof.
+move=> /transposeP Ht iLw jLh.
+have jLh' : j < nhorizontal by apply: leq_trans jLh _.
+apply/transposeP => i1 j1 i1Lw j1Lh.
+have /= niLw := (ltn_ord (rev_ord (Ordinal iLw))).
+have /= ni1Lw := (ltn_ord (rev_ord (Ordinal i1Lw))).
+have [<-|/eqP jDj1] := (j =P j1); last first.
+  by rewrite !cell_make_mover -?Ht // jDj1 orbT.
+have [<-|/eqP iDi1] := (i =P i1); last first.
+  by rewrite !cell_make_mover -?Ht ?iDi1 // eqn_sub2lE // eqSS iDi1.
+by rewrite !cell_make_movel.
+Qed.
+
+Lemma eval_transpose w1 w2 b1 b2 :
+  transpose w1 w2 -> transpose b1 b2 -> eval w1 b1 = eval w2 b2.
+Proof.
+move:  {-1}(ncells (w1 lor b1)) (refl_equal (ncells (w1 lor b1))).
+move=> n; elim: n w1 w2 b1 b2 => /= [|n IH] w1 w2 b1 b2 cE Ht1 Ht2;
+   rewrite [LHS]evalS [RHS]evalS -(cwin_transpose _ _ Ht1); case E : cwin => //=.
+   rewrite -(has_move_transpose _ _ (transpose_lor _ _ _ _ Ht1 Ht2)).
+  by rewrite -(cwin_transpose _ _ Ht2) [in LHS]ifN 1?[in RHS]ifN //;
+     have := ncells_has_move (w1 lor b1); rewrite cE; case: has_move.
+have Ht3 := transpose_lor _ _ _ _ Ht1 Ht2.
+rewrite -(has_move_transpose _ _ Ht3).
+case E1: has_move; last by rewrite -(cwin_transpose _ _ Ht2).
+pose f i := \max_(j < nheight | cmove (w1 lor b1) i j)  
+                 wcomp (eval b1 (make_move w1 i j)).
+rewrite -(big_mkord xpredT f) big_nat_rev /= big_mkord /= add0n /f.
+apply: eq_bigr => i _.
+under [LHS]eq_bigl => j do 
+  rewrite -(@cmove_transpose (w2 lor b2)) 1? transpose_sym //.
+under [LHS]eq_bigr => /= j Hc.
+  have Ht4 : transpose (make_move w2 i j) (make_move w1 (nwidth - i.+1) j)
+    by apply: make_move_transpose; rewrite // transpose_sym.
+  rewrite -(IH b2 _ _ _ _ _ Ht4); last 2 first.
+  have := cE; rewrite (ncells_transpose _ _ Ht3) // (ncells_cmove w2 b2 i j) //.
+    by case.
+  by rewrite transpose_sym.
+  over.
+by [].
+Qed.
+
 (*
 End FindMoves.
 *)
 
-Check 
+ 
 (*
 (* Find possible moves *)
 Definition find_moves wstate bstate :=
