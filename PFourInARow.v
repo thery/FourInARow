@@ -1099,12 +1099,9 @@ Lemma cell_lor s1 s2 i j :
   cell (s1 lor s2) i j =  (cell s1 i j)  ||  (cell s2 i j).
 Proof. by rewrite [LHS]lor_spec. Qed.
 
-Lemma cell_height w b  i : 
-  i < nwidth -> wf_state (w lor b) -> ~~ cell w i nheight.
+Lemma cell_height s i : i < nwidth -> wf_state s -> ~~ cell s i nheight.
 Proof.
-move=> iLw sWf; apply/negP => Hc.
-have : cell (w lor b) i nheight by rewrite cell_lor Hc.
-set s := w lor b in iLw *.
+move=> iLw sWf; apply/negP.
 rewrite cell_get_column //.
 have /existsP[/= k /andP[kLh /forallP/(_ height)]/eqP->] :=
    wf_state_opzs _ (of_nat i) sWf.
@@ -1112,13 +1109,10 @@ case: nltbP => //.
 by case: nlebP kLh => //; rewrite ltnNge => ->.
 Qed.
 
-Lemma cell_width w b j :
-  j < nhorizontal -> wf_state (w lor b) -> ~~ cell w nwidth j.
+Lemma cell_width s j : j < nhorizontal -> wf_state s -> ~~ cell s nwidth j.
 Proof.
-move=> jLh sWf; apply/negP => Hc.
+move=> jLh sWf; apply/negP.
 have jLw : j < nwB by rewrite (leq_trans jLh) // ltnW // nhorizontalLwB.
-have : cell (w lor b) nwidth j by rewrite cell_lor Hc.
-set s := w lor b in sWf *.
 rewrite /cell => Hcc.
 have : to_nat (width * horizontal + of_nat j) %/ nhorizontal < nwidth.
   by apply: wf_state_true_width sWf _.
@@ -1134,6 +1128,19 @@ apply: leq_trans (_ : 2 ^ 8 <= _); first by [].
 by rewrite nwB_pow leq_exp2l.
 Qed.
 
+Lemma of_nat_int_add_mod i j : 
+  i = of_nat (to_nat i %/ to_nat j) * j + of_nat (to_nat i %% to_nat j).
+Proof.
+rewrite [LHS](int_add_mod i j); congr (_ * _ + _); apply: to_nat_inj.
+  rewrite of_natK; first by rewrite to_nat_div.
+  by apply: leq_ltn_trans (leq_div _ _) (to_nat_bounded _).
+  rewrite of_natK; first by rewrite to_nat_mod.
+by apply: leq_ltn_trans (leq_mod _ _) (to_nat_bounded _).
+Qed.
+
+Lemma bit_cell s i : 
+  bit s i = cell s (to_nat i %/ nhorizontal) (to_nat i %% nhorizontal).
+Proof. by rewrite [in LHS](of_nat_int_add_mod i horizontal). Qed.
 
 Lemma is_won_cwin w b : wf_state (w lor b) -> is_won w = cwin w.
 Proof.
@@ -1170,9 +1177,9 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       have : to_nat r < nhorizontal by rewrite to_nat_mod ltn_mod.
       rewrite leq_eqVlt => /orP[/eqP He|//].
       have He1 : to_nat r = nheight by case: He.
-      have /negP[] : ~~ cell w (to_nat v) (to_nat r).
-        by rewrite He1 (cell_height _ _ _ _ Hw).
-      by rewrite /cell !to_natK // -int_add_mod.
+      have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).
+        by rewrite He1 (cell_height _ _ _ Hw).
+      by rewrite cell_lor /cell !to_natK // -int_add_mod // H1.
     apply/existsP; exists (Ordinal rB) => /=.
     have Fv k : k < 4 -> of_nat (to_nat v + k) = v + of_nat k.
       move=> kL4.
@@ -1187,27 +1194,30 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       apply: to_nat_inj; rewrite of_natK //.
       by rewrite to_nat_add of_natK.
     move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
-      have /negP[] : ~~ cell w (to_nat v).+1 (to_nat r).
+      have /negP[] : ~~ cell (w lor b) (to_nat v).+1 (to_nat r).
         rewrite He.
         apply: cell_width Hw => //.
         by apply: leq_trans rB _.
-      rewrite /cell !to_natK // -addn1 Fv //.
+      rewrite cell_lor /cell; apply/orP; left.
+      rewrite !to_natK // -addn1 Fv //.
       rewrite mul_add_distr_r mul_1_l -add_assoc [_ + r]add_comm add_assoc.
       by rewrite -int_add_mod.
     move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
-      have /negP[] : ~~ cell w (to_nat v).+2 (to_nat r).
+      have /negP[] : ~~ cell (w lor b) (to_nat v).+2 (to_nat r).
         rewrite He.
         apply: cell_width Hw => //.
         by apply: leq_trans rB _.
-      rewrite /cell !to_natK // -addn2 Fv //.
+      rewrite cell_lor /cell; apply/orP; left.
+      rewrite !to_natK // -addn2 Fv //.
       rewrite mul_add_distr_r -add_assoc [_ + r]add_comm add_assoc.
       by rewrite -int_add_mod.
     move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
-      have /negP[] : ~~ cell w (to_nat v).+3 (to_nat r).
+      have /negP[] : ~~ cell (w lor b) (to_nat v).+3 (to_nat r).
         rewrite He.
         apply: cell_width Hw => //.
         by apply: leq_trans rB _.
-      rewrite /cell !to_natK // -addn3 Fv //.
+      rewrite cell_lor /cell; apply/orP; left.
+      rewrite !to_natK // -addn3 Fv //.
       rewrite mul_add_distr_r -add_assoc [_ + r]add_comm add_assoc.
       by rewrite -int_add_mod.
     rewrite vB //=.
@@ -1224,9 +1234,10 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       have : to_nat r < nhorizontal by rewrite to_nat_mod ltn_mod.
       rewrite leq_eqVlt => /orP[/eqP He|//].
       have He1 : to_nat r = nheight by case: He.
-      have /negP[] : ~~ cell w (to_nat v) (to_nat r).
-        by rewrite He1 (cell_height _ _ _ _ Hw).
-      by rewrite /cell !to_natK // -int_add_mod.
+      have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).
+        by rewrite He1 (cell_height _ _ _ Hw).
+      rewrite cell_lor /cell; apply/orP; left;
+      by rewrite !to_natK // -int_add_mod.
     apply/existsP; exists (Ordinal rB) => /=.
     have Fr k : k < 4 -> of_nat (to_nat r + k) = r + of_nat k.
       move=> kL4.
@@ -1241,19 +1252,20 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       apply: to_nat_inj; rewrite of_natK //.
       by rewrite to_nat_add of_natK.
     move: rB; rewrite  leq_eqVlt => /orP[/eqP He |rB].
-      have /negP[] : ~~ cell w (to_nat v) (to_nat r).+1.
+      have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).+1.
         by rewrite He; apply: cell_height Hw.
-      rewrite /cell !to_natK //.
+      rewrite cell_lor /cell; apply/orP; left.
+      rewrite !to_natK //.
       by rewrite -addn1 Fr // add_assoc -int_add_mod.
     move: rB; rewrite  leq_eqVlt => /orP[/eqP He |rB].
-      have /negP[] : ~~ cell w (to_nat v) (to_nat r).+2.
+      have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).+2.
         by rewrite He; apply: cell_height Hw.
-      rewrite /cell !to_natK //.
+      rewrite cell_lor /cell; apply/orP; left; rewrite !to_natK //.
       by rewrite -addn2 Fr // add_assoc -int_add_mod.
     move: rB; rewrite  leq_eqVlt => /orP[/eqP He |rB].
-      have /negP[] : ~~ cell w (to_nat v) (to_nat r).+3.
+      have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).+3.
         by rewrite He; apply: cell_height Hw.
-      rewrite /cell !to_natK //.
+      rewrite cell_lor /cell; apply/orP; left; rewrite !to_natK //.
       by rewrite -addn3 Fr // add_assoc -int_add_mod.
     rewrite rB //=.
     rewrite /cell !to_natK.
@@ -1269,9 +1281,10 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       have : to_nat r < nhorizontal by rewrite to_nat_mod ltn_mod.
       rewrite leq_eqVlt => /orP[/eqP He|//].
       have He1 : to_nat r = nheight by case: He.
-      have /negP[] : ~~ cell w (to_nat v) (to_nat r).
-        by rewrite He1 (cell_height _ _ _ _ Hw).
-      by rewrite /cell !to_natK // -int_add_mod.
+      have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).
+        by rewrite He1 (cell_height _ _ _ Hw).
+      rewrite cell_lor /cell; apply/orP; left.
+      by rewrite !to_natK // -int_add_mod.
     apply/existsP; exists (Ordinal rB) => /=.
     have Fv k : k < 4 -> of_nat (to_nat v + k) = v + of_nat k.
       move=> kL4.
@@ -1295,48 +1308,53 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     have rLw : to_nat r < nwB.
       by apply: ltn_trans rB hLwB.  
     have : 0 <= to_nat r by []; rewrite  leq_eqVlt => /orP[/eqP He |r1B].
-      have /negP[] : ~~ cell w (to_nat v) nheight.
+      have /negP[] : ~~ cell (w lor b) (to_nat v) nheight.
         by apply: cell_height Hw.
-      rewrite /cell to_natK //.
+      rewrite cell_lor /cell; apply/orP; left; rewrite to_natK //.
       suff -> : v * horizontal = x by [].
       rewrite (int_add_mod x horizontal) -/v -/r.
       suff -> : r = 0 by rewrite add_comm add_0_l.
       by apply: to_nat_inj.
     move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
-      have /negP[] : ~~ cell w (to_nat v).+1 (to_nat r).-1.
+      have /negP[] : ~~ cell (w lor b) (to_nat v).+1 (to_nat r).-1.
         rewrite He.
         apply: cell_width Hw => //.
         rewrite prednK // ltnW //.
         by apply: leq_trans rB _.
-      rewrite /cell -addn1 -subn1 Fv // Fr //=.
+      rewrite cell_lor /cell; apply/orP; left.
+      rewrite -addn1 -subn1 Fv // Fr //=.
       by rewrite -Hl mul_1_l -int_add_mod.
     move: r1B; rewrite  leq_eqVlt => /orP[/eqP He |r1B].
-      have /negP[] : ~~ cell w (to_nat v).+1 nheight.
+      have /negP[] : ~~ cell (w lor b) (to_nat v).+1 nheight.
         by apply: cell_height Hw.
-      rewrite /cell // -addn1 Fv // mul_add_distr_r mul_1_l -add_assoc.
+      rewrite cell_lor /cell; apply/orP; left.
+      rewrite -addn1 Fv // mul_add_distr_r mul_1_l -add_assoc.
       have -> : (horizontal + of_nat nheight) = 1 + 2 * up_left by [].
       have <- : r = 1 by apply: to_nat_inj.
       by rewrite add_assoc -int_add_mod.
     move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
-      have /negP[] : ~~ cell w (to_nat v).+2 (to_nat r).-2.
+      have /negP[] : ~~ cell (w lor b) (to_nat v).+2 (to_nat r).-2.
         rewrite He.
         apply: cell_width Hw => //.
         by rewrite -subn2 (leq_ltn_trans (leq_subr _ _)) // (leq_trans rB).
-      rewrite /cell -addn2 -subn2 Fv // Fr//=.
+      rewrite cell_lor /cell; apply/orP; left.
+      rewrite -addn2 -subn2 Fv // Fr//=.
       by rewrite -Hl -int_add_mod.
     move: r1B; rewrite  leq_eqVlt => /orP[/eqP He |r1B].
-      have /negP[] : ~~ cell w (to_nat v).+2 nheight.
+      have /negP[] : ~~ cell (w lor b) (to_nat v).+2 nheight.
         by apply: cell_height Hw.
-      rewrite /cell // -addn2 Fv // mul_add_distr_r -add_assoc.
+      rewrite cell_lor /cell; apply/orP; left.
+      rewrite -addn2 Fv // mul_add_distr_r -add_assoc.
       have -> : (2 * horizontal + of_nat nheight) = 2 + 3 * up_left by [].
       have <- : r = 2 by apply: to_nat_inj.
       by rewrite add_assoc -int_add_mod.
     move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
-      have /negP[] : ~~ cell w (to_nat v).+3 (to_nat r).-1.-2.
+      have /negP[] : ~~ cell (w lor b) (to_nat v).+3 (to_nat r).-1.-2.
         rewrite He.
         apply: cell_width Hw => //.
         by rewrite -subn3 (leq_ltn_trans (leq_subr _ _)) // (leq_trans rB).
-      rewrite /cell -addn3 -subn3  Fv // Fr //=.
+      rewrite cell_lor /cell; apply/orP; left.
+      rewrite  -addn3 -subn3  Fv // Fr //=.
       by rewrite -Hl -int_add_mod.
     rewrite r1B vB /=.
     rewrite /cell !to_natK.
@@ -1354,9 +1372,9 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     have : to_nat r < nhorizontal by rewrite to_nat_mod ltn_mod.
     rewrite leq_eqVlt => /orP[/eqP He|//].
     have He1 : to_nat r = nheight by case: He.
-    have /negP[] : ~~ cell w (to_nat v) (to_nat r).
-      by rewrite He1 (cell_height _ _ _ _ Hw).
-    by rewrite /cell !to_natK // -int_add_mod.
+    have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).
+      by rewrite He1 (cell_height _ _ _ Hw).
+    by rewrite cell_lor /cell; apply/orP; left; rewrite !to_natK // -int_add_mod.
   apply/existsP; exists (Ordinal rB) => /=.
   have Fv k : k < 4 -> of_nat (to_nat v + k) = v + of_nat k.
     move=> kL4.
@@ -1385,37 +1403,40 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
   have rLw : to_nat r < nwB.
     by apply: ltn_trans rB hLwB.
   move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
-    have /negP[] : ~~ cell w (to_nat v).+1 (to_nat r).+1.
-      rewrite He.
-      by apply: cell_width Hw.
-    rewrite /cell -addn1 Fv // -[(to_nat r).+1]addn1 Fr //=.
+    have /negP[] : ~~ cell (w lor b) (to_nat v).+1 (to_nat r).+1.
+      by rewrite He; apply: cell_width Hw.
+    rewrite cell_lor /cell; apply/orP; left.
+    rewrite -addn1 Fv // -[(to_nat r).+1]addn1 Fr //=.
     by rewrite -Hr mul_1_l -int_add_mod.
   move: rB; rewrite  leq_eqVlt => /orP[/eqP He |rB].
-    have /negP[] : ~~ cell w (to_nat v).+1 nheight.
+    have /negP[] : ~~ cell (w lor b) (to_nat v).+1 nheight.
       by apply: cell_height Hw.
-    rewrite /cell -He -addn1 Fv // -[(to_nat r).+1]addn1 Fr //=.
+    rewrite cell_lor /cell; apply/orP; left.
+    rewrite -He -addn1 Fv // -[(to_nat r).+1]addn1 Fr //=.
     by rewrite -Hr mul_1_l -int_add_mod.
   move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
-    have /negP[] : ~~ cell w (to_nat v).+2 (to_nat r).+2.
-      rewrite He.
-      by apply: cell_width Hw.
-    rewrite /cell -addn2 Fv // -[(to_nat r).+2]addn2 Fr //=.
+    have /negP[] : ~~ cell (w lor b) (to_nat v).+2 (to_nat r).+2.
+      by rewrite He; apply: cell_width Hw.
+    rewrite cell_lor /cell; apply/orP; left.
+    rewrite -addn2 Fv // -[(to_nat r).+2]addn2 Fr //=.
     by rewrite -Hr -int_add_mod.
   move: rB; rewrite  leq_eqVlt => /orP[/eqP He |rB].
-    have /negP[] : ~~ cell w (to_nat v).+2 nheight.
+    have /negP[] : ~~ cell (w lor b) (to_nat v).+2 nheight.
       by apply: cell_height Hw.
-    rewrite /cell -He -addn2 Fv // -[(to_nat r).+2]addn2 Fr //=.
+    rewrite cell_lor /cell; apply/orP; left.
+    rewrite -He -addn2 Fv // -[(to_nat r).+2]addn2 Fr //=.
     by rewrite -Hr -int_add_mod.
   move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
-    have /negP[] : ~~ cell w (to_nat v).+3 (to_nat r).+3.
-      rewrite He.
-      by apply: cell_width Hw.
-    rewrite /cell -addn3 Fv // -[(to_nat r).+3]addn3 Fr //=.
+    have /negP[] : ~~ cell (w lor b) (to_nat v).+3 (to_nat r).+3.
+      by rewrite He; apply: cell_width Hw.
+    rewrite cell_lor /cell; apply/orP; left.
+    rewrite -addn3 Fv // -[(to_nat r).+3]addn3 Fr //=.
     by rewrite -Hr -int_add_mod.
   move: rB; rewrite  leq_eqVlt => /orP[/eqP He |rB].
-    have /negP[] : ~~ cell w (to_nat v).+3 nheight.
+    have /negP[] : ~~ cell (w lor b) (to_nat v).+3 nheight.
       by apply: cell_height Hw.
-    rewrite /cell -He -addn3 Fv // -[(to_nat r).+3]addn3 Fr //=.
+    rewrite cell_lor /cell; apply/orP; left.
+    rewrite -He -addn3 Fv // -[(to_nat r).+3]addn3 Fr //=.
     by rewrite -Hr -int_add_mod.
   rewrite rB vB /=.
   rewrite /cell !to_natK.
@@ -1783,67 +1804,78 @@ case: (_ %% 2) (ltn_pmod w1 (isT : 0 < 2)) => [|[|n]].
 by rewrite 2!ltnS ltn0 => H; case: notF.
 Qed.
 
-Lemma get_border_correct w b i j : 
-  wf_state (w lor b) ->
-  i < nwidth -> j < nheight -> cell (get_border w b) i j = cmove (w lor b) i j.
+
+Lemma bool1E b : (nat_of_bool b == 1%N) = b.
+Proof. by case: b. Qed.
+
+Lemma wf_state_up_log2_cell (s : int) (x z : nat) :
+   let y := to_nat (up_log2 (get_column s (of_nat x))) in 
+    wf_state s -> x < nwidth -> z < nhorizontal -> 
+    cell (bottom + s) x z = (z == y).
 Proof.
-set wb := _ lor _ => wf_wb iLw jLh.
-rewrite /cell /get_border bitE wf_state_button -/wb //.
-set ss := _ %% 2.
-suff -> : ss =  (j == to_nat (up_log2 (get_column wb (of_nat i)))).
-  move: jLh; have [->|nP] /= := (j =P _) => jLh.
-    by apply/sym_equal/idP/cmoveE1.
-  by apply/sym_equal/idP => /= /cmoveE.
-rewrite {}/ss.
+move=> /= Hwf xLw zLh.
+rewrite /cell bitE wf_state_button //.
 under eq_bigr do rewrite -expnD.
-pose f i := (to_nat (up_log2 (get_column wb (of_nat i))) + i * nhorizontal)%N.
-rewrite (sum_pow_incr_div_mod f) /f //; last first.
-  move=> j1 k1 /andP[j1Lk1 k1Lw].
-  have := wf_state_opzs _ (of_nat j1) wf_wb.
+pose f i := (to_nat (up_log2 (get_column s (of_nat i))) + i * nhorizontal)%N.
+rewrite (sum_pow_incr_div_mod f) // {}/f => [|j k /andP[jLk kLw]]; last first.
+  have := wf_state_opzs _ (of_nat j) Hwf.
   rewrite opzsE' //; case: nlebP => // uLh _.
-  apply: leq_trans (_ : j1.+1 * nhorizontal <= _).
+  apply: leq_trans (_ : j.+1 * nhorizontal <= _).
     by rewrite mulSn ltn_add2r.
-  apply: leq_trans (_ : k1 * nhorizontal <= _); last by apply: leq_addl.
-  by rewrite leq_mul2r j1Lk1 orbT.
+  apply: leq_trans (_ : k * nhorizontal <= _); last by apply: leq_addl.
+  by rewrite leq_mul2r jLk orbT.
 rewrite modn_small; last by case: (_ \in _).
 rewrite to_nat_add //; last first.
   rewrite to_nat_mul; last first.
     rewrite of_natK; last by apply: ltn_trans nwidthLwB.
     by apply: leq_trans (ltnW nwihoLwB); rewrite ltn_mul2r.
   rewrite of_natK; last by apply: ltn_trans nwidthLwB.
-  rewrite of_natK; last by apply: ltn_trans nheightLwB.
-  apply: leq_trans (_ : i.+1 * nhorizontal <= _).
-    by rewrite mulSn addnC ltn_add2r (ltn_trans jLh).
+  rewrite of_natK; last by apply: ltn_trans nhorizontalLwB.
+  apply: leq_trans (_ : x.+1 * nhorizontal <= _).
+    by rewrite mulSn addnC ltn_add2r.
   by apply: leq_trans (ltnW nwihoLwB); rewrite leq_mul2r.
 rewrite to_nat_mul; last first.
   rewrite of_natK; last by apply: ltn_trans nwidthLwB.
   by apply: leq_trans (ltnW nwihoLwB); rewrite ltn_mul2r.
-rewrite of_natK; last by apply: ltn_trans nwidthLwB.
-rewrite of_natK; last by apply: ltn_trans nheightLwB.
-rewrite addnC.
-congr (nat_of_bool _); apply/mapP/eqP => [[x]|->]; last first.
-  by exists i; rewrite ?mem_iota.
-rewrite mem_iota add0n => /andP[_ xLw] H.
-have [iLx|xLi|xEi] := ltngtP i x; last first.
-- by have /eqP := H; rewrite xEi eqn_add2r => /eqP.
-- suff : (to_nat (up_log2 (get_column wb (of_nat x))) + x * nhorizontal
-          < j + i * to_nat horizontal)%N.
+rewrite bool1E; apply/mapP/eqP => [[x1]|->]; last first.
+  exists x; first by rewrite mem_iota.
+  rewrite of_natK; last by apply: ltn_trans nwidthLwB.
+  by rewrite addnC to_natK.
+rewrite (of_natK x); last by apply: ltn_trans nwidthLwB.
+rewrite (of_natK z); last by apply: ltn_trans nhorizontalLwB.
+rewrite mem_iota add0n => /andP[_ x1Lw] H.
+rewrite addnC in H.
+have [xLx1|x1Lx|xEx1] := ltngtP x x1; last first.
+- by move/eqP: H; rewrite xEx1 eqn_add2r => /eqP.
+- suff : (to_nat (up_log2 (get_column s (of_nat x1))) + x1 * nhorizontal
+          < z + x * to_nat horizontal)%N.
     by rewrite -H ltnn.
-  apply: leq_trans (_ : x.+1 * to_nat horizontal <= _).
+  apply: leq_trans (_ : x1.+1 * to_nat horizontal <= _).
     rewrite mulSn ltn_add2r.
-    have := wf_state_opzs _ (of_nat x) wf_wb.
+    have := wf_state_opzs _ (of_nat x1) Hwf.
     rewrite opzsE' //; case: nlebP => // uLh _.
-    apply: leq_trans (_ : i * nhorizontal <= _).
+    apply: leq_trans (_ : x * nhorizontal <= _).
       by rewrite leq_mul2r.
     by apply: leq_addl.
-suff : (j + i * to_nat horizontal < 
-        to_nat (up_log2 (get_column wb (of_nat x))) + x * nhorizontal)%N.
+suff : (z + x * to_nat horizontal < 
+        to_nat (up_log2 (get_column s (of_nat x1))) + x1 * nhorizontal)%N.
   by rewrite -H ltnn.
-apply: leq_trans (_ : i.+1 * to_nat horizontal <= _).
+apply: leq_trans (_ : x.+1 * to_nat horizontal <= _).
   by rewrite mulSn ltn_add2r // (leq_trans jLh).
-apply: leq_trans (_ : x * to_nat horizontal <= _).
-  by rewrite leq_mul2r iLx orbT.
+apply: leq_trans (_ : x1 * to_nat horizontal <= _).
+  by rewrite leq_mul2r xLx1 orbT.
 by apply: leq_addl.
+Qed.
+
+Lemma get_border_correct w b i j : 
+  wf_state (w lor b) ->
+  i < nwidth -> j < nheight -> cell (get_border w b) i j = cmove (w lor b) i j.
+Proof.
+set wb := _ lor _ => wf_wb iLw jLh.
+rewrite wf_state_up_log2_cell //; last by apply: leq_trans jLh _.
+move: jLh; have [-> jLh|nP jLh] /= := (j =P _).
+  by apply/sym_equal/idP/cmoveE1.
+by apply/sym_equal/idP => /= /cmoveE.
 Qed.
 
 (*
@@ -2516,6 +2548,138 @@ under [LHS]eq_bigr => /= j Hc.
 by [].
 Qed.
 
+Lemma wf_state_get_border_width w b j : 
+  wf_state (w lor b) -> bit (get_border w b) j -> 
+      to_nat j %/ nhorizontal < nwidth.
+Proof.
+move=> Hwf; rewrite /get_border bitE wf_state_button // => Hf.
+case: ltnP => // wLjh; move: Hf.
+under eq_bigr do rewrite -expnD.
+pose f i := (to_nat (up_log2 (get_column (w lor b) (of_nat i))) 
+              + i * nhorizontal)%N.
+rewrite (sum_pow_incr_div _ _ f) // => [|j1 k1 /andP[j1Lk1 k1Lw]]; last first.
+  have := wf_state_opzs _ (of_nat j1) Hwf.
+  rewrite opzsE' //; case: nlebP => // uLh _.
+  apply: leq_trans (_ : j1.+1 * nhorizontal <= _).
+    by rewrite mulSn ltn_add2r.
+  apply: leq_trans (_ : k1 * nhorizontal <= _); last by apply: leq_addl.
+  by rewrite leq_mul2r j1Lk1 orbT.
+rewrite big1 //= => i _; rewrite /f.
+rewrite divn_small // ltn_exp2l //.
+have := wf_state_opzs _ (of_nat i) Hwf.
+rewrite opzsE' //; case: nlebP => // uLh _.
+apply: leq_trans (_ : to_nat j %/ nhorizontal * nhorizontal <= _); last first.
+  by rewrite [X in _ <=  X](divn_eq (to_nat j) nhorizontal) leq_addr.
+apply: leq_trans (_ : nwidth * nhorizontal <= _); last by rewrite leq_mul2r.
+apply: leq_ltn_trans (_ :   to_nat height + i * nhorizontal < _).
+  by rewrite leq_add2r.
+apply: leq_trans (_ :  i.+1 * nhorizontal <= _).
+  by rewrite mulSn ltn_add2r.
+by rewrite leq_mul2r ltn_ord.
+Qed.
+
+Lemma get_border_w w b : wf_state (w lor b) -> get_border w b land w = 0.
+Proof.
+move=> Hwf; apply/is_zero_spec; rewrite is_zeroP; apply/forallP=> /= i.
+rewrite land_spec negb_and.
+have [/= Hb|//] := boolP (bit _ _).
+have Hwidth := wf_state_get_border_width _ _ _ Hwf Hb.
+move: Hb.
+rewrite (int_add_mod i horizontal).
+rewrite -(to_natK (i / horizontal)) to_nat_div.
+rewrite -(to_natK (i mod horizontal)) to_nat_mod.
+set x := _ %/ _ in Hwidth *; set y := _ %% _.
+have yLh : y < nhorizontal by rewrite ltn_mod.
+rewrite -![bit _ _]/(cell _ _ _).
+have : y <= nheight by [].
+case: ltngtP => [yLh'||->] _ //; last first.
+  move=> _; suff : ~~ cell (w lor b) x nheight.
+    by rewrite cell_lor; case: cell.
+  by apply: cell_height Hwf.
+rewrite get_border_correct // => /cmove_cell.
+by rewrite cell_lor negb_or => /andP[].
+Qed.
+
+Lemma get_borderC w b : get_border w b = get_border b w.
+Proof. by rewrite /get_border lorC. Qed.
+
+Lemma get_border_b w b : wf_state (w lor b) -> get_border w b land b = 0.
+Proof. by rewrite lorC get_borderC; exact: get_border_w. Qed.
+
+Definition get_code w b := get_border w b lor w.
+
+Lemma and_imp_add_or x y : x land y = 0 -> x + y = x lor y.
+Proof.
+move=> /is_zero_spec; rewrite is_zeroP => /forallP /= Axy.
+apply/bit_add_or => n Bx By; case/negP: (Axy n).
+by rewrite land_spec Bx.
+Qed.
+
+Lemma wf_state_up_log2_lt (s : int) (x z : nat) :
+   let y := to_nat (up_log2 (get_column s (of_nat x))) in 
+    wf_state s -> x < nwidth -> z < nhorizontal -> cell s x z -> z < y.
+Proof.
+move=> y sWf xLw zLh.
+rewrite cell_get_column //.
+have := wf_state_opzs _ (of_nat x) sWf.
+rewrite opzsE' => [/andP[/nlebP uLh /eqP->]|]; last by case: nltbP.
+rewrite bit_decr; last by apply/nltbP/(leq_trans uLh).
+case: nltbP => //.
+by rewrite -/y of_natK // (ltn_trans _ nhorizontalLwB).
+Qed.
+
+Lemma get_code_uniq w1 w2 b1 b2 : 
+  wf_state (w1 lor b1) -> wf_state (w2 lor b2) -> 
+  w1 land b1 = 0 -> w2 land b2 = 0 ->
+  get_code w1 b1 = get_code w2 b2 -> w1 = w2 /\ b1 = b2.
+Proof.
+move=> Hwf1 Hwf2 Aw1 Aw2 CE.
+suff : w1 = w2.
+  move=> wE; split => //.
+  move: CE; rewrite /get_code -!and_imp_add_or; try by apply get_border_w.
+  rewrite /get_border -!and_imp_add_or // wE.
+  by move=> /add_cancel_r /add_cancel_l /add_cancel_l.
+suff BE : get_border w1 b1 = get_border w2 b2.
+  move: CE; rewrite /get_code -!and_imp_add_or; try by apply get_border_w.
+  by rewrite BE => /add_cancel_l.
+have [/forallP /= HF|/forallPn /= [x Hx]] :=
+    boolP [forall i, bit (get_border w1 b1) i == bit (get_border w2 b2) i].
+  by apply: bit_ext => i; exact: (eqP (HF i)).
+wlog Hb : w1 w2 b1 b2 Hwf1 Hwf2 Aw1 Aw2 CE Hx / bit (get_border w1 b1) x.
+  move=> HW.
+  have [Hb1|Hb1] := boolP (bit (get_border w1 b1) x); first by apply: HW.
+  apply/sym_equal/HW => //; first by rewrite eq_sym.
+  by case: bit Hb1 Hx => //; case: bit.
+have Hb2 : ~~  bit (get_border w2 b2) x by case: bit Hx Hb => //; case: bit.
+have : bit (get_code w2 b2) x  by rewrite -CE lor_spec Hb.
+  rewrite lor_spec (negPf Hb2) /= => Hbw2.
+have iLw := wf_state_get_border_width _ _ _ Hwf1 Hb.
+set i := (_ %/ _) in iLw.
+pose j := to_nat x %% nhorizontal.
+have jLh : j < nhorizontal by apply: ltn_mod.
+have xE : x = of_nat i * horizontal + of_nat j.
+  by have := of_nat_int_add_mod x horizontal.
+pose z2 := to_nat (up_log2 (get_column (w2 lor b2) (of_nat i))).
+have z2Lh : z2 < nhorizontal.
+  have := wf_state_opzs _ (of_nat i) Hwf2.
+  rewrite opzsE' => [/andP[/nlebP uLh _]|]; last by case: nltbP.
+  by apply: leq_ltn_trans uLh _.
+have Hcg2 : cell (get_border w2 b2) i z2.
+  by rewrite wf_state_up_log2_cell.
+have jLz2 : j < z2.
+  apply: wf_state_up_log2_lt => //.
+  by rewrite cell_lor /cell -xE Hbw2.
+have : cell (get_code w1 b1) i z2 by rewrite CE cell_lor Hcg2.
+move: Hb; rewrite xE -[bit _ _ ]/(cell _ _ _) wf_state_up_log2_cell //.
+move => /eqP iE.
+rewrite cell_lor wf_state_up_log2_cell //.
+rewrite -iE (gtn_eqF jLz2) /= => Ciz2.
+suff : z2 < j by case: ltngtP jLz2.
+rewrite iE.
+apply: wf_state_up_log2_lt Hwf1 _ _ _ => //.
+by rewrite cell_lor Ciz2.
+Qed.
+
 (*
 End FindMoves.
 *)
@@ -2527,72 +2691,7 @@ Definition find_moves wstate bstate :=
   let border := get_border wstate bstate in
   fms wstate bstate border columns [::].
 *)
-
-(* Auxillary parsing function from string to states *)
-Fixpoint parsei s i j wstate bstate (turn : bool) :=
-  match
-    match width ?= j with 
-    |Eq => 
-       match i ?= 0 with Eq => None | _ => Some (i-1,0) end
-    | _ => Some (i,j) end
-  with None => (wstate,bstate,turn)
-  | Some (i,j) =>
-    match s with
-    | EmptyString => (wstate,bstate,turn)
-    | String "X"%char s1 =>
-       let move := lsl one (j * horizontal + i) in 
-       parsei s1 i (j + 1) (make_move wstate move) bstate (negb turn)
-    | String "O"%char s1 =>
-       let move := lsl one (j * horizontal + i) in 
-       parsei s1 i (j + 1) wstate (make_move bstate move) (negb turn)
-    | String "_"%char s1 => 
-       parsei s1 i (j + 1) wstate bstate turn
-    | String _ s1 => parsei s1 i j wstate bstate turn
-    end
-  end.
-
-(* Parsing function from string to states *)
-Definition parse_string s :=
-  parsei s height width zero zero true.
-
-(* Newline String *)
-Definition nl := String "013" EmptyString.
-
-(* Auxillary function that turns states into into a string *)
-Fixpoint to_stringi m i j wstate bstate :=
-  match m with O => ""%string | (S m1) => 
-  match
-    match width ?= j with 
-    |Eq => 
-       match i ?= 0 with Eq => None | _ => Some (i-1,0,nl) end
-    | _ => Some (i,j,""%string) end
-  with
-  | None => nl
-  | Some (i,j,ts) =>
-    (ts ++
-   (let move := lsl one (j * horizontal + i) in 
-    if is_nzero (move land wstate) then "X"%string ++ (to_stringi m1 i (j + 1) wstate bstate) 
-    else if is_nzero (move land bstate) then "O"%string ++ (to_stringi m1 i (j + 1) wstate bstate) 
-    else "_"%string ++ (to_stringi m1 i (j + 1) wstate bstate)))%string
-  end
-  end.
-
-(* Turn states into a string *)
-Definition to_string wstate bstate :=
- (to_stringi (nheight * nwidth) height width wstate bstate)%string.
-
-(* Turn the score in a string *)
-Definition string_of_score (score : int) :=
-  if eqb score unknown then "UNKNOWN"%string else
-  if eqb score loss then "LOSS"%string else
-  if eqb score draw then "DRAW"%string else
-  if eqb score win then "WIN"%string else
-  if eqb score drawwin then "DRAWWIN"%string else
-  if eqb score lossdraw then "LOSSDRAW"%string else
-  "????"%string.
-
-(* Reverse the valuation *)
-Definition rev_val value := losswin - value.
+(* 
 
 Fixpoint sym_code i sres res :=
   match i with 
@@ -2613,6 +2712,8 @@ Definition get_code wstate bstate turn height :=
      let sres := sym_code nwidth zero res in
      min sres res
   else res.
+*)
+
 
 (* Put an element in the hash-table
     The layout of the two-entry hash-table
