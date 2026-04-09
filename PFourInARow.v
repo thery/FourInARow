@@ -3451,6 +3451,17 @@ rewrite /res1; elim: (res) => //= [] [m v] cls IH1.
 by case: (_ ?= _).
 Qed.
 
+Lemma fms_draw_corect w b : 
+  wf_state (w lor b) -> 
+  (fms w b (get_border w b) columns [::] == Draw) = ~~ has_move (w lor b).
+Proof.
+move=> Hwf.
+rewrite (fms_draw_rect_corect _ _ _ 0) //; last first.
+  by move=> j jLc; rewrite addn0 columns_val.
+rewrite andTb negb_exists.
+apply/forallP/forallP => /= H i; first by rewrite negb_exists H.
+by have := H i; rewrite negb_exists.
+Qed. 
 
 
 
