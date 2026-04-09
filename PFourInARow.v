@@ -1956,7 +1956,6 @@ move: jLh; have [-> jLh|nP jLh] /= := (j =P _).
 by apply/sym_equal/idP => /= /cmoveE.
 Qed.
 
-Print fmove.
 (*
 Section FindMoves.
 
@@ -1990,7 +1989,6 @@ Fixpoint fms columns res :=
         fms columns (insert_fmove move v res)
    end.
 *)
-
 
 Lemma fmsE wstate bstate border columns res :
 fms wstate bstate border columns res =
@@ -3463,7 +3461,112 @@ apply/forallP/forallP => /= H i; first by rewrite negb_exists H.
 by have := H i; rewrite negb_exists.
 Qed. 
 
-
+Lemma fmt_forced_rect_corect w b res i k cols : 
+  wf_state (w lor b) -> 
+  (size cols + i = nwidth)%N ->
+  (forall j, j < size cols -> 
+      nth 0 cols j = lsl first_column (of_nat (j + i) * horizontal)) ->
+  (fmt w (get_border w b) cols res == Forced k) = 
+    ((res == Forced k) &&
+     [forall i1 : 'I_nwidth, forall j1 : 'I_nheight, 
+      [==> i <= i1, cmove (w lor b) i1 j1 => ~~ cwin (make_move w i1 j1)]]).
+Proof.
+move=> Hwf.
+elim: cols i => /= [i|c cols IH i Hsi Hf].
+  rewrite add0n => -> _; case: eqP => //= _.
+  apply/sym_equal/idP/forallP => /= i1.
+  by apply/forallP =>j1; rewrite leqNgt ltn_ord.
+have iLw : i < nwidth by rewrite -Hsi addSn ltnS leq_addl.
+have iLwB : i < nwB by apply: ltn_trans nwidthLwB.
+have Hc : c = lsl first_column (of_nat i * horizontal).
+  by apply: (Hf ord0).
+have Hf'  j : j < size cols -> nth 0 cols j =
+                    lsl  first_column (of_nat (j + i.+1) * horizontal).
+  by move=> jLs; rewrite -addSnnS -Hf.
+have Hs : (size cols + i.+1)%N = nwidth by rewrite -addSnnS.
+have IH' := IH _ Hs Hf'.
+case: ifP => Hif1.
+  rewrite IH'; congr (_ && _).
+  apply/forallP/forallP => /= H i1; apply/forallP => /= j1; apply/implyP => H1;
+      apply/implyP=> H2; last first.
+    by have /forallP/(_ j1) := H i1; rewrite ltnW // H2.
+  have j1Lw : j1 < nwB by apply: ltn_trans nheightLwB.    
+  move: H1; case: ltngtP => // [H1|iEi1] _ /=.
+    by have /forallP/(_ j1) := H i1; rewrite H2 H1.
+  rewrite -get_border_correct // -iEi1 in H2.
+  suff : cell (get_border w b land c) i j1.
+    by have /is_zero_spec-> := Hif1; rewrite cell_0.
+  rewrite cell_land H2 Hc /cell bit_lsl ifN.
+    rewrite add_comm addK first_column_spec.
+    by apply/nltbP; rewrite of_natK // (ltn_trans _ nheightLwB).
+  have ihE : to_nat (of_nat i * horizontal) = (i * nhorizontal)%N.
+    by rewrite to_nat_mul of_natK // (ltn_trans _ whLw) // ltn_mul2r iLw.
+  have ihj1E : to_nat (of_nat i * horizontal + of_nat j1) = 
+               (i * nhorizontal + j1)%N.
+    rewrite to_nat_add ?ihE ?of_natK //.
+    apply: leq_ltn_trans (_ : i.+1 * nhorizontal < _).
+      by rewrite mulSn addnC leq_add2r // ltnW // (ltn_trans (ltn_ord _)).
+    apply: leq_ltn_trans whLw.
+    by rewrite leq_mul2r (leq_ltn_trans _ iLw) // (leq_trans (leq_subr _ _)).
+  rewrite negb_or; apply/andP; (split; apply/negP) => [/nltbP|/nlebP].
+    by rewrite ihj1E ihE ltnNge leq_addr.
+  rewrite ihj1E leqNgt (leq_trans (_ : _ < i.+1 * nhorizontal)) //.
+    by rewrite mulSn addnC ltn_add2r (leq_trans (ltn_ord _)).
+  apply: leq_trans (_ : nwidth * nhorizontal <= _) => //.
+  by rewrite leq_mul2r iLw.
+have /negP/negP := Hif1; rewrite is_zeroNP =>/existsP[/= k1 k1E].
+have : bit c k1 by move: k1E; rewrite land_spec; case: bit.
+rewrite {1}Hc => /(bit_lsl_first_column_divE _ _ iLw) iE.
+have : bit c k1 by move: k1E; rewrite land_spec; case: bit.
+rewrite {1}Hc => /(bit_lsl_first_column_mod_lt _ _ iLw) => kLh.
+have cM :  cmove (w lor b) i (to_nat k1 %% nhorizontal).
+  rewrite -get_border_correct // iE -bit_cell.
+  by move: (k1E); rewrite land_spec; case/andP.
+have cmE : cwin (make_move w i (to_nat k1 %% nhorizontal)) = 
+       is_won (FourInARow.make_move (get_border w b land c) w).
+  rewrite -(is_won_cwin _ b) //; last first.
+    by rewrite lorC; apply: wf_state_cmove.
+  rewrite /make_move iE -(of_nat_int_add_mod k1 horizontal) lorC.
+  rewrite /FourInARow.make_move.
+  suff <- : get_border w b land c = lsl 1 k1 by [].
+  apply: bit_ext => k2.
+  move: (k1E); rewrite land_spec; case/andP => bE cE /=.
+  have k1Ld : to_nat k1 < ndigits.
+    by case: ltnP => // dLk; rewrite bit_M // in cE; apply/nlebP.
+  have [k2Ld|/negP dLk2] := nltbP k2 digits; last first.
+    by rewrite !bit_M //; apply/nlebP; rewrite leqNgt.
+  rewrite bit_onenn //; try by apply/nltbP.
+  rewrite land_spec.
+  case: eqP => [<-|k1Dk2]; first by rewrite bE.
+  case: (boolP (bit c k2)); last by rewrite andbF.
+  move=> bck2; move: (bck2).
+  rewrite Hc => /(bit_lsl_first_column_divE _ _ iLw) // iE'.
+  case: (boolP (bit _ _)) => //.
+  rewrite bit_cell get_border_correct //; last 2 first.
+  - by rewrite -iE'.
+  - by move: bck2; rewrite Hc => /(bit_lsl_first_column_mod_lt _ _ iLw).
+  move=> /cmoveE k2mE.
+  move: bE.
+  rewrite bit_cell get_border_correct //; last by rewrite -iE.
+  move=> /cmoveE kmE.
+  case: k1Dk2.
+  apply/to_nat_inj.
+  rewrite (divn_eq (to_nat k1) nhorizontal).
+  by rewrite kmE -iE iE' -k2mE -divn_eq.
+case: ifP => HE.
+  apply/sym_equal/negP/negP.
+  rewrite negb_and; apply/orP; right.
+  rewrite negb_forall; apply/existsP; exists (Ordinal iLw).
+  rewrite negb_forall; apply/existsP; exists (Ordinal kLh) => /=.
+  by rewrite cmE HE leqnn cM.
+rewrite IH'; case: eqP => //= _.
+apply/forallP/forallP => /= H i1; apply/forallP => /= j1;
+    apply/implyP => H1; apply/implyP => H2; last first.
+  by have /forallP/(_ j1) := H i1; rewrite ltnW //= H2.
+move: H1; case: ltngtP => // iEi2 _.
+  by have /forallP/(_ j1) := H i1; rewrite iEi2 //= H2.
+by rewrite (cmoveE _ _ _ H2) -iEi2 -(cmoveE _ _ _ cM) cmE HE.
+Qed.
 
 (*
 End FindMoves.
