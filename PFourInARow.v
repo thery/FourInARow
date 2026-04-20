@@ -3960,6 +3960,108 @@ move=> H1 H2 H3 H4 H5; split => // i1 j1; first by apply: H1.
 by apply: H5.
 Qed.
 
+Lemma cmoveC i1 i2 j1 j2 w b : 
+  cmove (w lor b) i1 j1 -> cmove (w lor b) i2 j2 -> i1 != i2 ->
+  cmove ((make_move w i1 j1) lor b) i2 j2.
+Proof.
+move => /and3P[i1Lw j1Lh /forallP/= ci1] /and3P[i2Lw j2Lh /forallP/= ci2] i1Di2.
+have j1Lho : j1 < nhorizontal by apply: ltn_trans j1Lh _.
+have j2Lho : j2 < nhorizontal by apply: ltn_trans j2Lh _.
+apply/and3P; split => //; apply/forallP => /= z.
+rewrite lorC lorA [b lor _]lorC cell_lor (eqP (ci2 z)).
+rewrite /cell bit_onenn; last 2 first.
+- by apply/nltbP; rewrite ihjE // ihjLd.
+- by apply/nltbP; rewrite ihjE // ihjLd.
+case: (boolP (_ == _ + _)) => [/eqP i1j1Ei2z|]; last by rewrite orbF.
+move: i1Di2; case: (ltngtP i1 i2) => // [i1Li2|j1Lj2].
+  suff : to_nat (of_nat i1 * horizontal + of_nat j1) <
+         to_nat (of_nat i2 * horizontal + of_nat z) by rewrite i1j1Ei2z ltnn.
+  rewrite !ihjE //.
+  apply: leq_trans (_ : i2 * nhorizontal <= _); last by apply: leq_addr.
+  apply: leq_trans (_ : i1.+1 * nhorizontal <= _).
+    by rewrite mulSn addnC ltn_add2r.
+  by rewrite leq_mul2r.
+suff : to_nat (of_nat i2 * horizontal + of_nat z) <
+         to_nat (of_nat i1 * horizontal + of_nat j1) by rewrite i1j1Ei2z ltnn.
+rewrite !ihjE //.
+apply: leq_trans (_ : i1 * nhorizontal <= _); last by apply: leq_addr.
+apply: leq_trans (_ : i2.+1 * nhorizontal <= _).
+  by rewrite mulSn addnC ltn_add2r.
+by rewrite leq_mul2r.
+Qed.
+
+Lemma cwin_lor w1 w2 : cwin w1 -> cwin (w1 lor w2).
+Proof.
+rewrite /cwin; case: (boolP (hwin w1)) => 
+    [/existsP[i1 /existsP[j1]/and5P[H1 H2 H3 H4 H5]] _|_].
+  suff -> : hwin (w1 lor w2) by [].  
+  apply/existsP; exists i1; apply/existsP; exists j1.
+  by apply/and5P; split; rewrite // cell_lor ?(H2, H3, H4, H5).
+case: (boolP (vwin w1)) => 
+    [/existsP[i1 /existsP[j1]/and5P[H1 H2 H3 H4 H5]] _|_].
+  suff -> : vwin (w1 lor w2) by rewrite orbT.  
+  apply/existsP; exists i1; apply/existsP; exists j1.
+  by apply/and5P; split; rewrite // cell_lor ?(H2, H3, H4, H5).
+case: (boolP (uwin w1)) => 
+    [/existsP[i1 /existsP[j1]/and5P[H1 H2 H3 H4 /andP[H5 H6]]] _|_].
+  suff -> : uwin (w1 lor w2) by rewrite ?orbT.  
+  apply/existsP; exists i1; apply/existsP; exists j1.
+  by apply/and5P; split; rewrite // !cell_lor ?(H2, H3, H4, H5, H6).
+case: (boolP (dwin w1)) => 
+    [/existsP[i1 /existsP[j1]/and5P[H1 H2 H3 H4 /andP[H5 H6]]] _|//].
+suff -> : dwin (w1 lor w2) by rewrite ?orbT.  
+apply/existsP; exists i1; apply/existsP; exists j1.
+by apply/and5P; split; rewrite // !cell_lor ?(H2, H3, H4, H5, H6).
+Qed.
+
+Lemma find_moves_win w b : 
+  wf_state (w lor b) -> ~~ cwin b -> find_moves w b = Win -> eval w b = WIN.
+Proof.
+move=> wf_wb ncwin_b /eqP.
+rewrite /find_moves fms_win_corect // => /existsP[i /existsP [j /andP[cM cW]]].
+apply/eqP/eval_winP; right; exists i; exists j; split => //.
+by apply/eqP/eval_lossP; split => //; left.
+Qed.
+
+Lemma find_moves_draw w b : 
+  wf_state (w lor b) -> ~~ cwin w -> ~~ cwin b -> 
+  find_moves w b = Draw -> eval w b = DRAW.
+Proof.
+move=> wf_wb ncw_w ncwin_b /eqP.
+rewrite /find_moves fms_draw_corect // => Nhm.
+by apply/eqP/eval_drawP; split; rewrite ?(negPf Nhm).
+Qed.
+
+Lemma find_moves_fordec w b m : 
+  wf_state (w lor b) -> ~~ cwin w -> ~~ cwin b -> 
+  find_moves w b = Forced m -> eval w b = wcomp (eval b (w lor m)).
+Proof.
+move=> wf_wb ncw_w ncw_b /eqP /(fms_forced_corect _ _ _ wf_wb) // => []
+   [Hf [i [j [mE cM1 cW1]]]].
+have iLw : i < nwidth by case/and3P: cM1.
+have jLh : j < nheight by case/and3P: cM1.
+have -> : w lor m = make_move w i j by rewrite mE.
+rewrite evalS (negPf ncw_w) /= ifT; last first.
+  by apply/existsP; exists (Ordinal iLw); apply/existsP; exists (Ordinal jLh).
+rewrite (bigD1 (Ordinal iLw)) //=.
+rewrite (bigD1 (Ordinal jLh)) //=.
+set u := \max_(_ < _ | _) _.
+have -> : u = 0%N.
+  apply: big1 => /= j1 /andP[cM2 /eqP/val_eqP/=].
+  by rewrite (cmoveE _ _ _ cM1) (cmoveE _ _ _ cM2) eqxx.
+rewrite maxn0; set v := \max_(_ < _ | _) _.
+apply/maxn_idPl.
+suff vLL : v <= LOSS.
+  by apply: (leq_trans vLL); case/or3P: (evalOr b (make_move w i j)) => /eqP->.
+apply/bigmax_leqP => /= i1 /eqP/val_eqP/= i1Di.
+apply/bigmax_leqP => /= j1 cM2.
+suff -> : eval b (make_move w i1 j1) = WIN by [].
+apply/eqP/eval_winP; right.
+exists i; exists j; split; first by rewrite lorC; apply: cmoveC.
+apply/eqP/eval_lossP; split; first by apply: Hf.
+by left.
+Qed.
+
 (*
 End FindMoves.
 *)
