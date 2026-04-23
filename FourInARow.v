@@ -141,10 +141,12 @@ Definition mhash := nhash - 1.
 (* Symmetry level *)
 Definition sym_level := 10.
 
-(* Hash table because of size limitation we crea(* Size of the board *)
-te a matrix *)
+(* Hash table because of size limitation we create a 
+
+
+matrix *)
 Definition make_hash (u : unit) := 
-  make_matrix nhash (2 * (hprime/nhash) + 1) 0.
+  make_matrix nhash (2 * (hprime/ nhash + 1)) 0.
 
 Definition min m n := match m ?= n with Lt => m | _ => n end.
 Definition max m n := match m ?= n with Lt => n | _ => m end.
@@ -367,8 +369,6 @@ Definition get_code wstate bstate turn height :=
  *)
 
 Definition hput wstate bstate turn work score hash_table height :=
-   if (score land 1) =? 0 then hash_table
-   else
    let code := get_code wstate bstate turn height in
    let fkey := code mod hprime in
    let key := 2 * (fkey >> lhash) in
