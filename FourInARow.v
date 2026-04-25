@@ -121,7 +121,7 @@ Definition locksize := 25.
 Definition slocksize := number_of_cells - locksize.
 (* Size of hash table should have HPRIME > 2^SLOCKSIZE *)
 (* Definition hprime := 8388609. *)
-Definition hprime := 16777121.
+Definition hprime := 16777259.
 (* Mask for the lock  *)
 Definition lockmask := (1 << locksize) - 1.
 (* Size of the score 3 *)
@@ -133,7 +133,7 @@ Definition scorelocksize := locksize + scoresize.
 (* Size of the lock + score *)
 Definition scorelockmask := (1 << scorelocksize) - 1.
 (* Log of the number of hash tables *)
-Definition lhash := 3.
+Definition lhash := 4.
 (* Number of hash tables *)
 Definition nhash := 1 << lhash.
 (* Mask for hash tables *)
