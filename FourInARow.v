@@ -49,8 +49,6 @@ Fixpoint init_matrix (A : Type) n nn a (v : A) m {struct n} :=
   end.
 Arguments init_matrix[A].
 
-Definition to_nat n := Z.to_nat (to_Z n).
-
 Definition make_matrix (A: Type) n m (v : A) :=
   let a := make n (make 0 v) in 
   init_matrix (to_nat n) n a v m.

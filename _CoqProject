@@ -2,5 +2,8 @@
 -I .
 
 FourInARow.v
-PFourInARow.v
 ssr_int.v
+Pbasic.v
+Phash.v
+Pmoves.v
+
