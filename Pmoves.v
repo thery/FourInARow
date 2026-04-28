@@ -1655,13 +1655,9 @@ under [LHS]eq_bigr => /= j Hc.
 by [].
 Qed.
 
-Definition evalt w b t := if t then eval w b else eval b w.
-
-Lemma evalt_score_bound w b t s :
-  (down_score s <= evalt w b t <= up_score s)%N -> to_nat s < 2 ^ nscoresize.
+Lemma eval_score_bound w b s :
+  (down_score s <= eval w b <= up_score s)%N -> to_nat s < 2 ^ nscoresize.
 Proof.
 rewrite /down_score /up_score.
-do 6 (case: eqP => [->//|_]).
-case: t => /=; first by case/or3P: (evalOr w b) => /eqP->.
-by case/or3P: (evalOr b w) => /eqP->.
+by do 6 (case: eqP => [->//|_]); case/or3P: (evalOr w b) => /eqP->.
 Qed.

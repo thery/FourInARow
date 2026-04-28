@@ -350,9 +350,8 @@ Fixpoint sym_code i sres res :=
   end.
     
 (* Get the unique code of a position *)
-Definition get_code wstate bstate turn height :=
-  let res := (match turn with true => wstate | false => bstate end) lor
-        (get_border wstate bstate) in
+Definition get_code wstate bstate height :=
+  let res := wstate lor (get_border wstate bstate) in
   if height <=? sym_level
   then
      let sres := sym_code nwidth zero res in
@@ -366,8 +365,8 @@ Definition get_code wstate bstate turn height :=
                    low bits = lock second entry
  *)
 
-Definition hput wstate bstate turn work score hash_table height :=
-   let code := get_code wstate bstate turn height in
+Definition hput wstate bstate work score hash_table height :=
+   let code := get_code wstate bstate height in
    let fkey := code mod hprime in
    let key := 2 * (fkey >> lhash) in
    let r :=  fkey land mhash in
@@ -387,9 +386,9 @@ Definition hput wstate bstate turn work score hash_table height :=
         (hash_table.[r <- ht]).
 
 (* Get an element in the hash-table *)
-Definition hget (wstate bstate : int) (turn : bool) 
+Definition hget (wstate bstate : int) 
          (hash_table : array (array int)) height := 
-   let code := get_code wstate bstate turn height in
+   let code := get_code wstate bstate height in
    let fkey := code mod hprime in
    let key := 2 * (fkey >> lhash) in
    let r :=  fkey land mhash in
@@ -410,36 +409,41 @@ Inductive pres := PRes (s : int) (v : int) (t : array (array int)).
 
 Section Process.
 
-Variables (wstate bstate : int) (turn : bool) (beta : int) (lvisited : int) 
+Variables (wstate bstate : int) (beta : int) (lvisited : int) 
           (height hscore :  int)
-          (alpha_beta : int -> int -> bool -> int -> int -> int -> 
+          (alpha_beta : int -> int -> int -> int -> int -> 
                          array (array int) -> pres).
+
+Definition ufix w := if (w land 1 =? 1) then w else 
+                      if (w =? drawwin) then draw else loss.
+
 Fixpoint process ms alpha score visited hash_table :=
   match ms with
   | nil =>
       let score := if (score =? losswin - hscore) then draw else score in
       let work := log2 (sub visited lvisited) in
-      let hash_table := hput wstate bstate turn work score hash_table height in
+      let hash_table := hput wstate bstate work score hash_table height in
       PRes score (incr visited) hash_table
   | (move, _) :: ms1 =>
     let (nscore,visited,hash_table) := 
-      alpha_beta bstate (make_move move wstate) (negb turn)
+      alpha_beta bstate (make_move move wstate)
            (rev_val beta) (rev_val alpha) visited hash_table in
-    let nscore := rev_val nscore in
+    let nscore := (rev_val nscore) in
     if nscore <=? score then process ms1 alpha score visited hash_table 
     else
     let score := nscore in
-    if score <=? alpha then process ms1 alpha score visited hash_table                 
+    let alpha1 := ufix score in 
+    if alpha1 <=? alpha then process ms1 alpha score visited hash_table                 
     else
-    let alpha := score in
-    if alpha <? beta  then process ms1 alpha score visited hash_table 
+    let alpha := alpha1 in
+    if alpha <? beta then process ms1 alpha score visited hash_table 
     else
       let score :=
         if (andb (score =? draw) (is_nempty_move ms1)) then drawwin 
         else score in
-      let score := if (score =? losswin - hscore) then draw else score in
+      let score := if ((score =? drawwin) && (hscore =? lossdraw)) then draw else score in
       let work := log2 (sub visited  lvisited) in
-      let hash_table := hput wstate bstate turn work score hash_table height in
+      let hash_table := hput wstate bstate work score hash_table height in
       PRes score (incr visited) hash_table
     end.
 
@@ -451,9 +455,9 @@ Inductive ares := ARes (a : int) (b : int) (c : bool).
 Section Alpha.
 
 (* alpha beta pruning search *)
-Fixpoint alpha_beta nstruct height wstate bstate turn alpha beta 
+Fixpoint alpha_beta nstruct height wstate bstate alpha beta 
                     visited hash_table :=
-  let hscore := hget wstate bstate turn hash_table height in
+  let hscore := hget wstate bstate hash_table height in
   let (alpha,beta,flag) :=
     (if (hscore =? unknown) then ARes alpha beta false else
     if negb ((hscore land 1) =? 0) then ARes alpha beta true else
@@ -472,7 +476,7 @@ Fixpoint alpha_beta nstruct height wstate bstate turn alpha beta
      | S nstruct =>
       let (score,visited,hash_table) := 
         alpha_beta nstruct (height + 1) bstate (make_move move wstate) 
-                   (negb turn) (rev_val beta) (rev_val alpha) 
+                    (rev_val beta) (rev_val alpha) 
                     visited hash_table : pres in
       PRes (rev_val score) visited hash_table 
      end
@@ -480,17 +484,17 @@ Fixpoint alpha_beta nstruct height wstate bstate turn alpha beta
      match nstruct with 
      | 0%nat => PRes unknown visited hash_table
      | S nstruct =>
-     process wstate bstate turn beta visited height hscore 
+     process wstate bstate beta visited height hscore 
             (alpha_beta nstruct (height + 1))
              ms alpha loss visited hash_table
      end
   end.
 
-Lemma alpha_betaE nstruct height wstate bstate turn alpha beta 
+Lemma alpha_betaE nstruct height wstate bstate alpha beta 
                     visited hash_table  :
- alpha_beta nstruct height wstate bstate turn alpha beta 
+ alpha_beta nstruct height wstate bstate alpha beta 
                     visited hash_table =
-  let hscore := hget wstate bstate turn hash_table height in
+  let hscore := hget wstate bstate hash_table height in
   let (alpha,beta,flag) :=
     (if (hscore =? unknown) then ARes alpha beta false else
     if negb ((hscore land 1) =? 0) then ARes alpha beta true else
@@ -509,7 +513,7 @@ Lemma alpha_betaE nstruct height wstate bstate turn alpha beta
      | S nstruct =>
       let (score,visited,hash_table) := 
         alpha_beta nstruct (height + 1) bstate (make_move move wstate) 
-                   (negb turn) (rev_val beta) (rev_val alpha) 
+                    (rev_val beta) (rev_val alpha) 
                     visited hash_table : pres in
       PRes (rev_val score) visited hash_table 
      end
@@ -517,7 +521,7 @@ Lemma alpha_betaE nstruct height wstate bstate turn alpha beta
      match nstruct with 
      | 0%nat => PRes unknown visited hash_table
      | S nstruct =>
-     process wstate bstate turn beta visited height hscore 
+     process wstate bstate beta visited height hscore 
             (alpha_beta nstruct (height + 1))
              ms alpha loss visited hash_table
      end
@@ -529,12 +533,14 @@ Definition eval_position s :=
    (wstate,bstate,turn) =>
    let (wstate,bstate) := if turn then (wstate,bstate) else (bstate,wstate) in
    let (score, _, _) :=
-     alpha_beta (1 + nheight * nwidth)%nat 0 wstate bstate turn loss win zero
+     alpha_beta (1 + nheight * nwidth)%nat 0 wstate bstate loss win zero
                 (make_hash tt) in
    score
    end.
 
 End Alpha.
+
+
 
 Definition ex1 := (
                  "___O___"
@@ -543,7 +549,6 @@ Definition ex1 := (
               ++ "___X___"
               ++ "__OO___"
               ++ "__XX___")%string.
-
 
 Definition ex2 := (
                  "___X___"

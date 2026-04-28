@@ -162,7 +162,6 @@ Qed.
 Lemma bit_mhash i : bit mhash i = (i <? lhash).
 Proof. by apply: bit_decr. Qed.
 
-
 Lemma bit_logand2_aux s dir i : 
   dir <=? digits ->
   bit (s land s >> dir land (s land s >> dir) >> (2 * dir)) i =
@@ -276,7 +275,6 @@ Definition get_column (state : int) (i : int) :=
 
 Lemma get_column0 i : get_column 0 i = 0.
 Proof. by rewrite /get_column lsr0 land0. Qed.
-
 
 Lemma bit_get_column0 s i j :  height <? j -> bit (get_column s i) j = false.
 Proof.
