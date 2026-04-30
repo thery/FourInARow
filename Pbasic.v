@@ -1168,7 +1168,22 @@ elim: l m2 v2  => [|[m3 v3] l IH] m2 v2 /=; rewrite ?inE ?xpair_eqE ?orbF //.
 case: (_ ?= _); rewrite ?inE ?xpair_eqE ?orbF ?IH //.
 by do 2 case: (_ && _).
 Qed.
-  
+
+Lemma insert_fmove_uniq_fst m v l : 
+  m \notin (map fst l) -> uniq (map fst l) -> uniq (map fst (insert_fmove m v l)).
+Proof.
+elim: l => //= [] [m1 v1] l IH.
+rewrite inE negb_or => /andP[H1 H2] /andP[H3 H4].
+case E : (_ ?= _); rewrite /= ?inE.
+- by rewrite (negPf H1) /= H2 H3.
+- rewrite IH // andbT.
+  apply/negP => /mapP[[m2 v2]].
+  rewrite in_insert_fmove => /orP[/andP[/eqP m2E _]|m2I] /= m1E.
+    by case/eqP: H1; rewrite m1E.
+  by case/negP: H3; apply/mapP; exists (m2, v2).
+by rewrite (negPf H1) /= H2 H3.
+Qed.
+
 Lemma nheightLwB : nheight < nwB.
 Proof.
 apply: ltn_trans (_ : 2 ^ 6 < _); first by [].

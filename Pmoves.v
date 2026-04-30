@@ -411,6 +411,27 @@ rewrite to_nat_add dE to_nat_lsl_one ?i11E -?jE // jjE prednK ?expn_gt0 //.
 by rewrite nwB_pow leq_exp2l.
 Qed.
 
+
+Lemma land_cmove w b i j : 
+  cmove (w lor b) i j -> w land b = 0 -> b land (mk_move w i j) = 0.
+Proof.
+move=> Hf Hc.
+apply: bit_ext => k.
+have [kLd|/negP] := nltbP k digits; last first.
+  by rewrite -leqNgt => dLk; rewrite !bit_M //; apply/nlebP.
+have := cmove_cell _ _ _ Hf.
+have : bit (w land b) k = false by rewrite Hc bit_0.
+rewrite /cell !(bit_0, land_spec, lor_spec).
+have [ijLd|/negP] := nltbP (of_nat i * horizontal + of_nat j) digits; last first.
+  rewrite -leqNgt => dLij.
+  rewrite !(bit_M _ (_ + _)); last by apply/nlebP.
+    case: bit => //; case: bit => //=; rewrite bit_lsl ifT //.
+    by apply/orP; left; apply/nltbP; apply: leq_trans _ dLij.
+  by apply/nlebP.
+rewrite bit_onenn; try (by apply/nltbP).
+by case: (of_nat i * horizontal + of_nat j =P k) => [->|]; do 2 case: bit.
+Qed.
+
 Lemma fmt_win_rect_corect w b res i cols : 
   wf_state (w lor b) -> 
   (size cols + i = nwidth)%N ->
@@ -1070,21 +1091,43 @@ apply/subsetP =>  /= [] [x y]; rewrite mem_insert_fmove => ->.
 by rewrite orbT.
 Qed.
 
+Lemma ihj_inv i1 i2 j1 j2 : 
+  i1 < nwidth -> i2 < nwidth -> j1 < nhorizontal -> j2 < nhorizontal ->
+  (i1 * nhorizontal + j1 = i2 * nhorizontal + j2 -> i1 = i2)%N.
+Proof.
+move=> i1Lw i2Lw j1Lh j2Lh i1j1E.
+case: (ltngtP i1 i2) => // [i1Li2|j1Lj2].
+  suff : i1 * nhorizontal + j1 < i2 * nhorizontal + j2.
+    by rewrite i1j1E ltnn.
+  apply: leq_trans (_ : i1.+1 * nhorizontal <= _).
+    by rewrite mulSn addnC ltn_add2r.
+  apply: leq_trans (leq_addr _ _).
+  by rewrite leq_mul2r.
+suff : i2 * nhorizontal + j2 < i1 * nhorizontal + j1.
+  by rewrite i1j1E ltnn.
+apply: leq_trans (_ : i2.+1 * nhorizontal <= _).
+  by rewrite mulSn addnC ltn_add2r.
+apply: leq_trans (leq_addr _ _).
+by rewrite leq_mul2r.
+Qed.
+  
+
 Lemma fms_moves_rect_corect w b res i l cols : 
   wf_state (w lor b) -> 
+  uniq (map fst res) ->
   (size cols + i = nwidth)%N ->
   (forall j, j < size cols -> 
       nth 0 cols j = lsl first_column (of_nat (j + i) * horizontal)) ->
   (forall i1 j1, (i1, j1) \in res ->
-      (exists i2 j2, cmove (w lor b) i2 j2 /\
-         i1 = lsl 1 (of_nat i2 * horizontal + of_nat j2))) ->
+      (exists i2 j2, [/\ cmove (w lor b) i2 j2, i2 < i & 
+         i1 = lsl 1 (of_nat i2 * horizontal + of_nat j2)])) ->
   (fms w b (get_border w b) cols res == Moves l) -> 
   [/\ 
     (forall i1 j1 , 
       i <= i1 -> cmove (w lor b) i1 j1 ->  ~~ cwin (mk_move w i1 j1)),
     (forall i1 j1 , 
       i <= i1 -> cmove (w lor b) i1 j1 ->  ~~ cwin (mk_move b i1 j1)),
-    0 < size l ,
+    0 < size l /\ uniq (map fst l),
    (forall i1 j1, (i1, j1) \in l -> 
       (exists i2 j2, cmove (w lor b) i2 j2 /\
          i1 = lsl 1 (of_nat i2 * horizontal + of_nat j2))) &
@@ -1092,11 +1135,12 @@ Lemma fms_moves_rect_corect w b res i l cols :
       (exists j2, ((lsl 1 (of_nat i1 * horizontal + of_nat j1)), j2) \in l))].
 Proof.
 move=> Hwf.
-elim: cols i res => /= [i res|c cols IH i res Hsi Hf Hin].
-  rewrite add0n => -> _.
-  case: res => //= [] [m v] l1 Hin /eqP[<-]; split => //=.
+elim: cols i res => /= [i res Ur |c cols IH i res Hu Hsi Hf Hin].
+  rewrite add0n => -> _; move: Ur.
+  case: res => //= [] [m v] l1 Ur Hin /eqP[<-]; split => //=.
   - by move=> i1 j1 H1 /and3P[]; rewrite ltnNge H1.
   - by move=> i1 j1 H1 /and3P[]; rewrite ltnNge H1.
+  - by move=> i1 j1 /Hin[i2 [j2 [H1 H2 H3]]]; exists i2; exists j2.
   by move=> i1 j1 H1 /and3P[]; rewrite ltnNge H1.
 have iLw : i < nwidth by rewrite -Hsi addSn ltnS leq_addl.
 have iLwB : i < nwB by apply: ltn_trans nwidthLwB.
@@ -1107,9 +1151,15 @@ have Hf'  j : j < size cols -> nth 0 cols j =
   by move=> jLs; rewrite -addSnnS -Hf.
 have Hs : (size cols + i.+1)%N = nwidth by rewrite -addSnnS.
 set res1 := insert_fmove _ _ _.
-have IH' r := IH _ r Hs Hf'.
+have IH' (r : seq (int * int)) (K : uniq (map fst r)) := IH _ r K Hs Hf'.
+have Hin' i1 j1 :
+  (i1, j1)  \in res ->
+   exists i2 j2 : nat, [/\ cmove (w lor b) i2 j2,  i2 < i.+1  & 
+   i1 = lsl 1 (of_nat i2 * horizontal + of_nat j2)].
+  case/Hin => i2 [j2 [H1 H2 H3]]; exists i2; exists j2; split => //.
+  by rewrite ltnS ltnW.
 case: ifP => Hif1.
-  move/IH'.
+  move/IH' => /(_ Hu).
   have Hcm j2 : j2 < nheight -> ~~ cmove (w lor b) i j2.
     move=> j2Lh.
     rewrite -get_border_correct //=; apply/negP=> H1.
@@ -1134,7 +1184,7 @@ case: ifP => Hif1.
       by rewrite mulSn addnC ltn_add2r (leq_trans j2Lh).
     apply: leq_trans (_ : nwidth * nhorizontal <= _) => //.
     by rewrite leq_mul2r iLw.
-  move=> /(_ Hin) [H1 H2 H3 H4 H5]; split => //.
+  move=> /(_ Hin') [H1 H2 H3 H4 H5]; split => //.
   - move=> i1 j1; case: ltngtP => // [i1Lj1|<-] _ HH; first by apply: H1.
     have j1Lh : j1 < nheight by case/and3P : HH.
     by have /negP[] := (Hcm j1 j1Lh).
@@ -1224,14 +1274,28 @@ case: ifP => HE1.
 have IHi i1 j1 : 
     (i1, j1)  \in res1 -> 
     exists i2 j2 : nat, 
-    cmove (w lor b) i2 j2 /\ i1 = lsl 1 (of_nat i2 * horizontal + of_nat j2).
-  rewrite mem_insert_fmove => /orP[|]; last by apply: Hin.
+    [/\ cmove (w lor b) i2 j2, i2 < i.+1  & i1 = lsl 1 (of_nat i2 * horizontal + of_nat j2)].
+  rewrite mem_insert_fmove => /orP[|]; last by apply: Hin'.
   rewrite xpair_eqE => /andP[/eqP -> _].
   exists i; exists (to_nat k1 %% nhorizontal); split => //.
   by rewrite iE -(of_nat_int_add_mod _ horizontal).
 move=> Hms.
 have rSl : res1 \subset l by apply: fms_subset Hms.
-have /IH' := Hms.
+have Hu' : uniq (map fst res1).
+  apply: insert_fmove_uniq_fst => //.
+  apply/negP => /mapP[[i1 v1 /Hin[i2 [j2 [H1 H2 H3]]]]] H4.
+  have /(congr1 (fun x => to_nat x))/eqP := H3.
+  rewrite -[i1]H4 gbcL to_nat_lsl_one; last first.
+    case: ltnP => // dLk1.
+    by rewrite bit_M // in k1E; apply/nlebP.
+  rewrite (divn_eq (to_nat k1) nhorizontal) // -iE.
+  have i2Lw : i2 < nwidth by case/and3P: H1.
+  have j2Lh : j2 < nheight by case/and3P: H1.
+  have j2Lho : j2 < nhorizontal by apply: ltn_trans j2Lh _.
+  rewrite [X in _ == X]to_nat_lsl_one ihjE //; last by apply: ihjLd.
+  rewrite eqn_exp2l // => /eqP /ihj_inv HH.
+  by rewrite HH ?ltn_pmod // ltnn in H2. 
+have /IH' := Hms => /(_ Hu').
 move=> /(_ IHi) [H1 H2 H3 H4 H5]; split => // i1 j1.
 - case: ltngtP => // [iLi1|iEi1] _; first by apply: H1.
   move=> cM1.
@@ -1253,17 +1317,15 @@ Lemma fms_moves_corect w b l :
   [/\ 
     (forall i1 j1, cmove (w lor b) i1 j1 ->  ~~ cwin (mk_move w i1 j1)),
     (forall i1 j1, cmove (w lor b) i1 j1 ->  ~~ cwin (mk_move b i1 j1)),
-    0 < size l ,
+    0 < size l /\  uniq (map fst l),
    (forall i1 j1, (i1, j1) \in l -> 
       (exists i2 j2, cmove (w lor b) i2 j2 /\
          i1 = lsl 1 (of_nat i2 * horizontal + of_nat j2))) &
    (forall i1 j1, cmove (w lor b) i1 j1 ->
       (exists j2, ((lsl 1 (of_nat i1 * horizontal + of_nat j1)), j2) \in l))].
 Proof.
-move=> Hwf /(fms_moves_rect_corect _ _ _ 0) // /(_ Hwf) [].
-- by rewrite addn0 columns_size.
-- by move=> j jLc; rewrite addn0 columns_val.
-- by move=> i1 j1; rewrite in_nil.
+move=> Hwf /(fms_moves_rect_corect _ _ _ 0) // /(_ Hwf) [] //.
+  by move=> j jLc; rewrite addn0 columns_val.
 move=> H1 H2 H3 H4 H5; split => // i1 j1; first by apply: H1.
   by apply: H2.
 by apply: H5.
@@ -1569,6 +1631,16 @@ split => //; first by apply: wf_state_cmove.
 by apply: Hf.
 Qed.
 
+Lemma find_moves_forced_cmove w b m : 
+  wf w b -> find_moves w b = Forced m-> exists i j,
+ (m = lsl 1 (of_nat i * horizontal + of_nat j)) /\
+ cmove (w lor b) i j.
+Proof.
+move=> [wf_wb ncw_w ncw_b] /eqP /(fms_forced_corect _ _ _ wf_wb) // => []
+   [Hf [i [j [mE cM1 cW1]]]].
+by exists i; exists j; split.
+Qed.
+
 Lemma find_moves_moves_wf w b l m : 
   wf w b -> find_moves w b = Moves l -> m \in l -> wf b (w lor m.1).
 Proof.
@@ -1580,20 +1652,39 @@ split => //=; first by apply: wf_state_cmove.
 by apply: Hww.
 Qed.
 
+Lemma find_moves_moves_cmove_in w b i j l : 
+  wf w b -> find_moves w b = Moves l -> cmove (w lor b) i j -> 
+  (lsl 1 (of_nat i * horizontal + of_nat j)) \in (map fst l).
+Proof.
+move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect _ _ _ wf_wb) // => []
+   [Hww Hwb Hs Hi Hc] /Hc [/= v1 Hv1].
+by apply/mapP=> /=; exists (lsl 1 (of_nat i * horizontal + of_nat j), v1).
+Qed.
+
 Lemma find_moves_moves_size w b l :
   wf w b -> find_moves w b = Moves l -> 0 < size l.
 Proof.
-by move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect _ _ _ wf_wb) // => [] [].
+move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect _ _ _ wf_wb) // [].
+by move=> _ _ [].
+Qed.
+
+Lemma find_moves_moves_uniq w b l :
+  wf w b -> find_moves w b = Moves l -> uniq (map fst l).
+Proof.
+move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect _ _ _ wf_wb) // [].
+by move=> _ _ [].
 Qed.
 
 Lemma find_moves_moves_cmove w b l (m : int * int) :
     wf w b -> find_moves w b = Moves l -> m \in l -> 
-    exists i j, cmove (w lor b) i j /\
-    m.1 = lsl 1 (of_nat i * horizontal + of_nat j).
+    exists i j, [/\ cmove (w lor b) i j,  ~~ cwin (mk_move w i j) &
+    m.1 = lsl 1 (of_nat i * horizontal + of_nat j)].
 Proof.
-case: m => m1 ?.
-by move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect _ _ _ wf_wb) // => []
-  [_ _ _ H _ /H].
+case: m => m1 l1.
+move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect _ _ _ wf_wb) // => [].
+move=> [H _ _ H1 _] /H1 [i2 [j2 [H3 H4]]].
+exists i2; exists j2; split => //.
+by apply: H.
 Qed.
 
 Lemma find_moves_moves_mem w b l i j :
