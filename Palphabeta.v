@@ -498,7 +498,7 @@ Qed.
 
 End Process.
 
-Lemma alphabeta_correct ns hg w b alpha1 beta1 sc v v1 h h1 : 
+Lemma alphabeta_correct ns hg w b alpha1 beta1 v h sc v1 h1 : 
   ncells (w lor b) < ns ->
   wf w b -> w land b = 0 ->
   valid_hash_table h ->
@@ -661,56 +661,66 @@ rewrite big1 => // j /andP[ijM /negP[]].
 by apply: find_moves_moves_cmove_in E _.
 Qed.
 
-Check fun wstate bstate =>
- alpha_beta (1 + nheight * nwidth)%nat 0 wstate bstate loss win zero
-                (make_hash tt) .
+Definition wfb w b := 
+  [&& (w lor b) >> (width * horizontal) == 0, ~~ is_won w, ~~ is_won b, 
+     w land b == 0 & all (fun x =>         
+      let i := get_column (w lor b) (of_nat x) in 
+        has (fun j => 
+              (i == decr (lsl one (of_nat j)))) (iota 0 nhorizontal))
+       (iota 0 nwidth)].
 
-                (* 
-Definition eval_position s :=
+Lemma wfb_correct w b : wfb w b -> wf w b /\ w land b = 0.
+Proof.
+case/and5P => /eqP H1 H2 H3 /eqP H4 /allP H5.
+split; last by [].
+suff Hwf : wf_state (w lor b).
+  split => //; first by rewrite -(is_won_cwin w b).
+  by rewrite -(is_won_cwin b w) // lorC.
+apply/andP; split.
+  apply/forallP => i; apply/implyP => Hb.
+  case: nltbP => // /negP.
+  rewrite -leqNgt => whLi.
+  rewrite (bit_false_lt _ _ _ whLi) // in Hb.
+  rewrite -[X in _ < X]mul1n.
+  rewrite -ltn_divLR //.
+  have : to_nat 0 = 0%N by [].
+  by rewrite -H1 to_nat_lsr => ->.
+apply/forallP => i; apply/implyP => /nltbP iLw.
+rewrite opzsE; last by [].
+have := H5 (to_nat i).
+rewrite mem_iota => /(_ iLw) /hasP[j Hj1 Hj2].
+rewrite mem_iota /= add0n in Hj1.
+apply/existsP; exists (of_nat j); apply/andP; split.
+  apply/nlebP; rewrite of_natK //.
+  by apply: ltn_trans nhorizontalLwB.
+by rewrite to_natK in Hj2.
+Qed.
+
+Definition htop_eval w b h :=
+  let: PRes sc _ _ := 
+    alpha_beta (1 + nheight * nwidth) 0 w b loss win zero h in sc.
+
+Lemma htopeval_correct w b h : 
+ wfb w b -> valid_hash_table h -> valid_eval w b (htop_eval w b h).
+Proof.
+move=> /wfb_correct[Hwf Ha] Hh.
+have := alphabeta_correct (1 + nheight * nwidth) 0 w b loss win zero h.
+rewrite /htop_eval.
+case: alpha_beta => sc1 v1 h1 /(_ sc1 v1 h1) [] //.
+rewrite ltnS (leq_trans (leq_ncells_landr empty_state _)) // land0.
+by rewrite ncells_empty_state.
+Qed.
+
+Definition top_eval w b := htop_eval w b (make_hash tt) .
+
+Lemma topeval_correct w b : wfb w b -> valid_eval w b (top_eval w b).
+Proof.
+move=> Hwfb; apply: htopeval_correct => //.
+apply: valid_hash_table_make_hash.
+Qed.
+
+Definition get_position s :=
    match parse_string s with
    (wstate,bstate,turn) =>
-   let (wstate,bstate) := if turn then (wstate,bstate) else (bstate,wstate) in
-   let (score, _, _) :=
-     alpha_beta (1 + nheight * nwidth)%nat 0 wstate bstate loss win zero
-                (make_hash tt) in
-   score
+   if turn then (wstate,bstate) else (bstate,wstate)
    end.
-*)
-
-
-Definition ex1 := (
-                 "___O___"
-              ++ "___X___"
-              ++ "___O___"
-              ++ "___X___"
-              ++ "__OO___"
-              ++ "__XX___")%string.
-
-
-Definition ex2 := (
-                 "___X___"
-              ++ "__OX___"
-              ++ "__XO___"
-              ++ "__OX___"
-              ++ "__XO___"
-              ++ "__OX__O")%string.
-
-
-Definition ex3 := (
-                 "___O___"
-              ++ "___X___" 
-              ++ "___O___"
-              ++ "___X___"
-              ++ "___O___"
-              ++ "XO_X___")%string.
-
-Definition ex4 := ("______" ++ "______" ++ "______" ++
-                   "______" ++ "______" ++ "______" ++ "______")%string.
-
-(*
-Time Eval native_compute in string_of_score (eval_position ex1).
-Time Eval native_compute in string_of_score (eval_position ex2).
-Time Eval native_compute in string_of_score (eval_position ex3).
-Time Eval native_compute in string_of_score (eval_position ex4).
-
-*)
