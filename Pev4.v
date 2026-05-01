@@ -38,8 +38,8 @@ Definition eb4 :=  (get_position ev4).2.
 
 Lemma eval_ev4E : top_eval ew4 eb4 = win.
 Proof.
-(* vm_cast_no_check (refl_equal win). *)
-Admitted.
+native_cast_no_check (refl_equal win).
+Time Qed.
 
 Lemma eval_ev4 : eval ew4 eb4 = WIN.
 Proof.

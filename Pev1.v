@@ -33,13 +33,14 @@ Definition ev1 := (
               ++ "_______"
               ++ "O__X___")%string.
 
+
 Definition ew1 :=  (get_position ev1).1.
 Definition eb1 :=  (get_position ev1).2.
 
 Lemma eval_ev1E : top_eval ew1 eb1 = win.
 Proof.
-(* vm_cast_no_check (refl_equal win). *)
-Admitted.
+native_cast_no_check (refl_equal win). 
+Time Qed.
 
 Lemma eval_ev1 : eval ew1 eb1 = WIN.
 Proof.

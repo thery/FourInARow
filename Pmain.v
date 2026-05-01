@@ -36,7 +36,7 @@ Proof.
 have /wfb_correct[H1 H2] : wfb ew1 eb1 by [].
 apply: valid_has_table_valid_hput => //; first by case: H1.
   rewrite -eval_ev1E.
-  by exact: (topeval_correct ew1 eb1 (refl_equal true)).
+  by exact: (topeval_correct (refl_equal true : wfb ew1 eb1 = _ )).
 by apply: valid_hash_table_make_hash.
 Qed.
 
@@ -47,7 +47,7 @@ Proof.
 have /wfb_correct[H1 H2] : wfb ew2 eb2 by [].
 apply: valid_has_table_valid_hput => //; first by case: H1.
   rewrite -eval_ev2E.
-  by exact: (topeval_correct ew2 eb2 (refl_equal true)).
+  by exact: (topeval_correct (refl_equal true : wfb ew2 eb2 = _ )).
 by apply: valid_eh1.
 Qed.
 
@@ -58,7 +58,7 @@ Proof.
 have /wfb_correct[H1 H2] : wfb ew3 eb3 by [].
 apply: valid_has_table_valid_hput => //; first by case: H1.
   rewrite -eval_ev3E.
-  by exact: (topeval_correct ew3 eb3 (refl_equal true)).
+  by exact: (topeval_correct (refl_equal true : wfb ew3 eb3 = _ )).
 by apply: valid_eh2.
 Qed.
 
@@ -69,7 +69,7 @@ Proof.
 have /wfb_correct[H1 H2] : wfb ew4 eb4 by [].
 apply: valid_has_table_valid_hput => //; first by case: H1.
   rewrite -eval_ev4E.
-  by exact: (topeval_correct ew4 eb4 (refl_equal true)).
+  by exact: (topeval_correct (refl_equal true : wfb ew4 eb4 = _ )).
 by apply: valid_eh3.
 Qed.
 

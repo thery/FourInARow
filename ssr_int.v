@@ -11,7 +11,7 @@ Import Uint63.
 (* Missing in mathcomp *)
 
 Lemma nat_pow_exp m n : Nat.pow m n = m ^ n.
-Proof.  by elim: n => //= n ->; rewrite expnS. Qed.
+Proof. by elim: n => //= n ->; rewrite expnS. Qed.
 
 Lemma divE x y : x / y = x %/ y.
 Proof.
@@ -20,6 +20,9 @@ apply/sym_equal/(Nat.div_unique); last first.
   by rewrite Nat.mul_comm; exact: divn_eq.
 by apply/ltP; rewrite ltn_mod.
 Qed.
+
+Lemma leq_succ_double n : 0 < n -> n < n.*2.
+Proof. by case: n => // n _; rewrite -addnn -addn1 leq_add2l. Qed.
 
 Lemma sum_pow2 n : \sum_(i < n) 2 ^ i < 2 ^ n.
 Proof.
@@ -54,8 +57,6 @@ case: j => [|j /andP[djLi iLdj]]; first by rewrite !muln0 ltn0 andbF.
 apply/eqP; rewrite eqn_leq; apply/andP; split; last by rewrite leq_divRL.
 by rewrite -ltnS ltn_divLR.
 Qed.
-
-
 
 Lemma sum_pow_incr_lt b f n : 
   1 < b -> (forall j k, j < k < n -> f j < f k) -> 
@@ -144,7 +145,6 @@ Definition is_nzero s := negb (eqb s zero).
 (* Get the log 2 of a number *)
 Definition log2 (v : int) : int :=
   (if v =? 0 then 0 else 62 - head0 v)%uint63.
-
 
 Module Type nwBT.
 
@@ -1150,9 +1150,6 @@ Proof.
 move=> jLd; apply: bit_ext => k; rewrite bit_0 land_spec bit_lsl bit_decr //.
 by case: nltbP; rewrite ?andbF.
 Qed.
-
-Lemma leq_succ_double n : 0 < n -> n.+1 <= n.*2.
-Proof. by case: n => // n _; rewrite -addnn -addn1 leq_add2l. Qed.
 
 Lemma lornn n : (n lor n = n)%uint63.
 Proof. by apply: bit_ext => i; rewrite lor_spec; case: bit. Qed.

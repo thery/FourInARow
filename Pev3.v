@@ -38,8 +38,8 @@ Definition eb3 :=  (get_position ev3).2.
 
 Lemma eval_ev3E : top_eval ew3 eb3 = win.
 Proof.
-(* vm_cast_no_check (refl_equal win). *)
-Admitted.
+native_cast_no_check (refl_equal win).
+Time Qed.
 
 Lemma eval_ev3 : eval ew3 eb3 = WIN.
 Proof.
