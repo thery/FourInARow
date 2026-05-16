@@ -29,20 +29,20 @@ Import Uint63Axioms.
 Import Uint63.
 Open Scope uint63_scope.
 
-Definition eh1 := hput ew1 eb1 10000000 win (make_hash tt) 0.
+Definition eh1 := hput ew1 eb1 10000000 win 0 (make_hash tt).
 
-Lemma valid_eh1 : valid_hash_table eh1.
+Lemma valid_eh1 : valid_htable eh1.
 Proof.
 have /wfb_correct[H1 H2] : wfb ew1 eb1 by [].
 apply: valid_has_table_valid_hput => //; first by case: H1.
   rewrite -eval_ev1E.
   by exact: (topeval_correct (refl_equal true : wfb ew1 eb1 = _ )).
-by apply: valid_hash_table_make_hash.
+by apply: valid_htable_make_hash.
 Qed.
 
-Definition eh2 := hput ew2 eb2 10000000 win eh1 0.
+Definition eh2 := hput ew2 eb2 10000000 win 0 eh1.
 
-Lemma valid_eh2 : valid_hash_table eh2.
+Lemma valid_eh2 : valid_htable eh2.
 Proof.
 have /wfb_correct[H1 H2] : wfb ew2 eb2 by [].
 apply: valid_has_table_valid_hput => //; first by case: H1.
@@ -51,9 +51,9 @@ apply: valid_has_table_valid_hput => //; first by case: H1.
 by apply: valid_eh1.
 Qed.
 
-Definition eh3 := hput ew3 eb3 10000000 win eh2 0.
+Definition eh3 := hput ew3 eb3 10000000 win 0 eh2.
 
-Lemma valid_eh3 : valid_hash_table eh3.
+Lemma valid_eh3 : valid_htable eh3.
 Proof.
 have /wfb_correct[H1 H2] : wfb ew3 eb3 by [].
 apply: valid_has_table_valid_hput => //; first by case: H1.
@@ -62,9 +62,9 @@ apply: valid_has_table_valid_hput => //; first by case: H1.
 by apply: valid_eh2.
 Qed.
 
-Definition eh4 := hput ew4 eb4 10000000 win eh3 0.
+Definition eh4 := hput ew4 eb4 10000000 win 0 eh3.
 
-Lemma valid_eh4 : valid_hash_table eh4.
+Lemma valid_eh4 : valid_htable eh4.
 Proof.
 have /wfb_correct[H1 H2] : wfb ew4 eb4 by [].
 apply: valid_has_table_valid_hput => //; first by case: H1.

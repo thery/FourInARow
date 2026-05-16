@@ -13,49 +13,6 @@ Import Uint63Axioms.
 Import Uint63.
 Open Scope uint63_scope.
 
-(*
-Parameter array : Type -> Type.
-Parameter set : forall {T : Type}, array T -> int -> T -> array T.
-Parameter get : forall {T : Type}, array T -> int -> T.
-Parameter foldi : forall {A : Type}, (int -> A -> A) -> int -> int -> A -> A.
-*)
-
-(* Naive implementation of foldi *)
-Fixpoint nfoldi {A : Type} (f : int -> A -> A) n (v : int) r :=
-  if n is (S n1) then nfoldi f n1 (v - 1) (f v r) else f v r.
-Definition foldi {A : Type} (f : int -> A -> A) v1 v2 r :=
-  if v1 <=? v2 then nfoldi f (Z.to_nat (to_Z (v2 - v1))) v2 r
-  else r.
-
-(*
-Notation " a '.[' b ']' " := (get a b) (at level 32,
-  format " a '.[' b ] ").
-Notation " a '.[' b '<-' c ']' " := (set a b c) (at level 32,
-  format " a '.[' b  '<-'  c ] ").
-*)
-
-(* 
-Module PArray.
-
-
-Parameter make : forall {T : Type}, int -> T -> array T.
-
-End PArray.
-*)
-
-Fixpoint init_matrix (A : Type) n nn a (v : A) m {struct n} :=
-  match n with 
-  | O => a
-  | S n1 => init_matrix A n1 (nn - 1) a.[nn - 1 <- make m v] v m
-  end.
-Arguments init_matrix[A].
-
-Definition make_matrix (A: Type) n m (v : A) :=
-  let a := make n (make 0 v) in 
-  init_matrix (to_nat n) n a v m.
-
-Arguments make_matrix[A].
-
 (* Width of the board *)
 Definition width := 7.
 Definition nwidth := 7%nat.
@@ -139,6 +96,26 @@ Definition nhash := 1 << lhash.
 Definition mhash := nhash - 1.
 (* Symmetry level *)
 Definition sym_level := 10.
+
+(* Naive implementation of foldi *)
+Fixpoint nfoldi {A : Type} (f : int -> A -> A) n (v : int) r :=
+  if n is (S n1) then nfoldi f n1 (v - 1) (f v r) else f v r.
+Definition foldi {A : Type} (f : int -> A -> A) v1 v2 r :=
+  if v1 <=? v2 then nfoldi f (Z.to_nat (to_Z (v2 - v1))) v2 r
+  else r.
+
+Fixpoint init_matrix (A : Type) n nn a (v : A) m {struct n} :=
+  match n with 
+  | O => a
+  | S n1 => init_matrix A n1 (nn - 1) a.[nn - 1 <- make m v] v m
+  end.
+Arguments init_matrix[A].
+
+Definition make_matrix (A: Type) n m (v : A) :=
+  let a := make n (make 0 v) in 
+  init_matrix (to_nat n) n a v m.
+
+Arguments make_matrix[A].
 
 (* Hash table because of size limitation we create a matrix *)
 Definition make_hash (u : unit) := 
