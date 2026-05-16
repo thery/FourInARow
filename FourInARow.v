@@ -1,3 +1,4 @@
+
 (******************************************************************************)
 (*        A program that performs a perfect play for 4 in a row               *)
 (*        This is directly inspired by a program by John Tromp                *)
@@ -95,7 +96,7 @@ Definition first_column := decr (one << height).
 (* Cells of the first column + border *)
 Definition full_first_column := decr (one << horizontal).
 (* Cells at the bottom of the board *)
-Definition bottom := div all_set (decr (one << horizontal)).
+Definition bottom := div all_set full_first_column.
 
 (* Cells at the top *)
 Definition top := bottom << height.
@@ -139,10 +140,7 @@ Definition mhash := nhash - 1.
 (* Symmetry level *)
 Definition sym_level := 10.
 
-(* Hash table because of size limitation we create a 
-
-
-matrix *)
+(* Hash table because of size limitation we create a matrix *)
 Definition make_hash (u : unit) := 
   make_matrix nhash (2 * (hprime/ nhash + 1)) 0.
 
@@ -197,6 +195,7 @@ Fixpoint insert_fmove (m : int) (v : int) l :=
   if l is (m1,v1)  :: l1 then
     if v ?= v1 is Lt then (m1, v1) :: (insert_fmove m v l1) else (m, v) :: l
   else (m, v) :: nil.
+
 Inductive fmove := 
  | Win
  | Draw
@@ -265,6 +264,8 @@ fms columns res =
 Proof.
 by case: columns.
 Qed.
+
+Compute PArray.max_length.
 
 End FindMoves.
 
@@ -365,35 +366,35 @@ Definition get_code wstate bstate height :=
                    low bits = lock second entry
  *)
 
-Definition hput wstate bstate work score hash_table height :=
+Definition hput wstate bstate work score height htable :=
    let code := get_code wstate bstate height in
    let fkey := code mod hprime in
    let key := 2 * (fkey >> lhash) in
    let r :=  fkey land mhash in
    let lock := (code >> slocksize) in
-   let ht := (hash_table.[r]) in
+   let ht := (htable.[r]) in
    let val1 := (ht.[key]) in
    let val2 := (ht.[key + 1]) in
    if orb ((val1 land lockmask) =? lock) ((val1 >> locksize) <=? work) then
        let ht := (ht.[key <- (work << locksize) lor lock]) in
        let ht := (ht.[key + 1 <- 
                    ((score << scorelocksize) lor (val2 land scorelockmask))]) in
-        (hash_table.[r <- ht])
+        (htable.[r <- ht])
    else
       let ht := (ht.[key + 1 <-
         ((((val2 >> scorelocksize) << scoresize) lor score) << locksize)
               lor lock]) in
-        (hash_table.[r <- ht]).
+        (htable.[r <- ht]).
 
 (* Get an element in the hash-table *)
-Definition hget (wstate bstate : int) 
-         (hash_table : array (array int)) height := 
+Definition hget (wstate bstate : int) height
+         (htable : array (array int)) := 
    let code := get_code wstate bstate height in
    let fkey := code mod hprime in
    let key := 2 * (fkey >> lhash) in
    let r :=  fkey land mhash in
    let lock := (code >> slocksize) in
-   let ht := (hash_table.[r]) in
+   let ht := (htable.[r]) in
    let val1 := (ht.[key]) in
    let val2 := (ht.[key + 1]) in
    if ((val1 land lockmask) =? lock) then
@@ -417,34 +418,34 @@ Variables (wstate bstate : int) (beta : int) (lvisited : int)
 Definition ufix w := if (w land 1 =? 1) then w else 
                       if (w =? drawwin) then draw else loss.
 
-Fixpoint process ms alpha score visited hash_table :=
+Fixpoint process ms alpha score visited htable :=
   match ms with
   | nil =>
       let score := if (score =? losswin - hscore) then draw else score in
       let work := log2 (sub visited lvisited) in
-      let hash_table := hput wstate bstate work score hash_table height in
-      PRes score (incr visited) hash_table
+      let htable := hput wstate bstate work score height htable in
+      PRes score (incr visited) htable
   | (move, _) :: ms1 =>
-    let (nscore,visited,hash_table) := 
+    let (nscore,visited,htable) := 
       alpha_beta bstate (make_move move wstate)
-           (rev_val beta) (rev_val alpha) visited hash_table in
+           (rev_val beta) (rev_val alpha) visited htable in
     let nscore := (rev_val nscore) in
-    if nscore <=? score then process ms1 alpha score visited hash_table 
+    if nscore <=? score then process ms1 alpha score visited htable 
     else
     let score := nscore in
     let alpha1 := ufix score in 
-    if alpha1 <=? alpha then process ms1 alpha score visited hash_table                 
+    if alpha1 <=? alpha then process ms1 alpha score visited htable                 
     else
     let alpha := alpha1 in
-    if alpha <? beta then process ms1 alpha score visited hash_table 
+    if alpha <? beta then process ms1 alpha score visited htable 
     else
       let score :=
         if (andb (score =? draw) (is_nempty_move ms1)) then drawwin 
         else score in
       let score := if ((score =? drawwin) && (hscore =? lossdraw)) then draw else score in
       let work := log2 (sub visited  lvisited) in
-      let hash_table := hput wstate bstate work score hash_table height in
-      PRes score (incr visited) hash_table
+      let htable := hput wstate bstate work score height htable in
+      PRes score (incr visited) htable
     end.
 
 End Process.
@@ -456,8 +457,8 @@ Section Alpha.
 
 (* alpha beta pruning search *)
 Fixpoint alpha_beta nstruct height wstate bstate alpha beta 
-                    visited hash_table :=
-  let hscore := hget wstate bstate hash_table height in
+                    visited htable :=
+  let hscore := hget wstate bstate height htable in
   let (alpha,beta,flag) :=
     (if (hscore =? unknown) then ARes alpha beta false else
     if negb ((hscore land 1) =? 0) then ARes alpha beta true else
@@ -466,35 +467,35 @@ Fixpoint alpha_beta nstruct height wstate bstate alpha beta
     else
       if (alpha =? draw) then ARes alpha beta true 
       else ARes alpha draw false) in
-  if flag then PRes hscore visited hash_table else
+  if flag then PRes hscore visited htable else
   match find_moves wstate bstate with
-  | Win => PRes win visited hash_table
-  | Draw => PRes draw visited hash_table
+  | Win => PRes win visited htable
+  | Draw => PRes draw visited htable
   | Forced move =>
       match nstruct with 
-     | 0%nat => PRes unknown visited hash_table
+     | 0%nat => PRes unknown visited htable
      | S nstruct =>
-      let (score,visited,hash_table) := 
+      let (score,visited,htable) := 
         alpha_beta nstruct (height + 1) bstate (make_move move wstate) 
                     (rev_val beta) (rev_val alpha) 
-                    visited hash_table : pres in
-      PRes (rev_val score) visited hash_table 
+                    visited htable : pres in
+      PRes (rev_val score) visited htable 
      end
   | Moves ms =>
      match nstruct with 
-     | 0%nat => PRes unknown visited hash_table
+     | 0%nat => PRes unknown visited htable
      | S nstruct =>
      process wstate bstate beta visited height hscore 
             (alpha_beta nstruct (height + 1))
-             ms alpha loss visited hash_table
+             ms alpha loss visited htable
      end
   end.
 
 Lemma alpha_betaE nstruct height wstate bstate alpha beta 
-                    visited hash_table  :
+                    visited htable  :
  alpha_beta nstruct height wstate bstate alpha beta 
-                    visited hash_table =
-  let hscore := hget wstate bstate hash_table height in
+                    visited htable =
+  let hscore := hget wstate bstate height htable in
   let (alpha,beta,flag) :=
     (if (hscore =? unknown) then ARes alpha beta false else
     if negb ((hscore land 1) =? 0) then ARes alpha beta true else
@@ -503,27 +504,27 @@ Lemma alpha_betaE nstruct height wstate bstate alpha beta
     else
       if (alpha =? draw) then ARes alpha beta true 
       else ARes alpha draw false) in
-  if flag then PRes hscore visited hash_table else
+  if flag then PRes hscore visited htable else
   match find_moves wstate bstate with
-  | Win => PRes win visited hash_table
-  | Draw => PRes draw visited hash_table
+  | Win => PRes win visited htable
+  | Draw => PRes draw visited htable
   | Forced move =>
       match nstruct with 
-     | 0%nat => PRes unknown visited hash_table
+     | 0%nat => PRes unknown visited htable
      | S nstruct =>
-      let (score,visited,hash_table) := 
+      let (score,visited,htable) := 
         alpha_beta nstruct (height + 1) bstate (make_move move wstate) 
                     (rev_val beta) (rev_val alpha) 
-                    visited hash_table : pres in
-      PRes (rev_val score) visited hash_table 
+                    visited htable : pres in
+      PRes (rev_val score) visited htable 
      end
   | Moves ms =>
      match nstruct with 
-     | 0%nat => PRes unknown visited hash_table
+     | 0%nat => PRes unknown visited htable
      | S nstruct =>
      process wstate bstate beta visited height hscore 
             (alpha_beta nstruct (height + 1))
-             ms alpha loss visited hash_table
+             ms alpha loss visited htable
      end
   end.
 Proof. by case: nstruct. Qed.
@@ -541,6 +542,13 @@ Definition eval_position s :=
 End Alpha.
 
 
+Definition ex0 := (
+                 "_______"
+              ++ "_______"
+              ++ "_______"
+              ++ "_______"
+              ++ "_______"
+              ++ "O__X___")%string.
 
 Definition ex1 := (
                  "___O___"
@@ -566,6 +574,25 @@ Definition ex3 := (
               ++ "___X___"
               ++ "___O___"
               ++ "XO_X___")%string.
+
+(*
+Require Import Extraction.
+
+From Stdlib Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOCamlInt63 ExtrOCamlPString.
+
+Extract Constant PrimArray.array "'a" => "'a Parray.t".
+
+Extract Constant PrimArray.make => "Parray.make".
+Extract Constant PrimArray.get => "Parray.get".
+Extract Constant PrimArray.default => "Parray.default".
+Extract Constant PrimArray.set => "Parray.set".
+Extract Constant PrimArray.length => "Parray.length".
+Extract Constant PrimArray.copy => "Parray.copy".
+
+Definition val1 := (eval_position ex0).
+
+Extraction "FF" val1.
+*)
 
 (*
 Time Eval native_compute in string_of_score (eval_position ex1).
