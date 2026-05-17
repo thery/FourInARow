@@ -1785,7 +1785,8 @@ apply/existsP; exists i1; apply/existsP; exists j1.
 by apply/and5P; split; rewrite // !cell_lor ?(j1_gt2, Hc1, Hc2, Hc3, Hc4).
 Qed.
 
-Definition wf_pos w b := [/\ wf_state (w lor b), ~~cwin w & ~~ cwin b].
+Definition wf_pos w b := 
+  [/\ wf_state (w lor b), w land b = 0, ~~cwin w & ~~ cwin b].
 
 Definition nlhash := to_nat lhash.
 
@@ -1795,9 +1796,7 @@ rewrite land_power2 // to_nat_mod to_nat_lslW [(_ %% nwB)%N]modn_small //.
 by rewrite mul1n nwB_pow ltn_exp2l.
 Qed.
 
-
 Definition nscoresize := to_nat scoresize.
-
 
 Definition LOSSDRAW := to_nat lossdraw.
 Definition DRAWWIN := to_nat drawwin.

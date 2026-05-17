@@ -45,11 +45,17 @@ Variable ab : int -> int -> int -> int -> int ->
                          array (array int) -> pres.
 Hypothesis hsV : valid_eval w b hs.
 Hypothesis hsL : hs land 1 == 0.
-Hypothesis wNw : ~~ cwin w.
-Hypothesis wNb : ~~ cwin b.
-Hypothesis wbWf : wf_state (w lor b).
-Hypothesis wbL : w land b = 0.
+Hypothesis wfp : wf_pos w b.
 Hypothesis wbH : has_move (w lor b).
+
+Let wNw : ~~ cwin w.
+Proof. by case: wfp. Qed.
+Let wNb : ~~ cwin b.
+Proof. by case: wfp. Qed.
+Let wbWf : wf_state (w lor b).
+Proof. by case: wfp. Qed.
+Let wbL : w land b = 0.
+Proof. by case: wfp. Qed.
 
 Lemma ufixE v : ufix v land 1 = 1.
 Proof.
@@ -218,11 +224,9 @@ Proof.
 by move=> lV; split => [m1 m1Il|]; apply: lV; rewrite inE ?eqxx ?m1Il ?orbT.
 Qed.
 
-
 Hypothesis ab_correct : forall w1 b1 (alpha1 beta1 : int) sc v v1 ht ht1, 
   ncells (w1 lor b1) < ncells (w lor b) ->
   wf_pos w1 b1 ->
-  w1 land b1 = 0 ->
   valid_htable ht ->
   valid_ab alpha1 beta1 ->
   ab w1 b1 alpha1 beta1 v ht =  PRes sc v1 ht1 ->
@@ -322,10 +326,9 @@ case E : ab => [s2 v2 h2].
 have [Vms1 [i [j [ijM inNW mE]]]] := valid_cons Vms. 
 have mmE : make_move m w = mk_move w i j.
   by rewrite [m]mE /mk_move /make_move lorC.
-case: (ab_correct _ _ _ _ _ E) => // [||||s2Nu vEs2 h2V].
+case: (ab_correct _ _ _ _ E) => // [|||s2Nu vEs2 h2V].
 - by rewrite mmE -ncells_cmove //.
-- by split; rewrite ?mmE // wf_state_cmove.
-- by rewrite mmE; apply: land_cmove.
+- by split; rewrite ?mmE // ?wf_state_cmove // land_cmove.
 - by apply: valid_ab_rev.
 have us2Le : wcomp (up_score s2) <= eval w b.
   have /(leq_trans _)-> // := leq_eval_move ijM.
@@ -502,16 +505,17 @@ End Process.
 
 Lemma alphabeta_correct ns h w b (alpha1 beta1 : int) v ht sc v1 ht1 : 
   ncells (w lor b) < ns ->
-  wf_pos w b -> w land b = 0 ->
+  wf_pos w b ->
   valid_htable ht ->
   valid_ab alpha1 beta1 ->
   alpha_beta ns h w b alpha1 beta1 v ht =  PRes sc v1 ht1 ->
   [/\ valid_answer sc, valid_eval w b sc & valid_htable ht1].
 Proof.
 elim: ns h w b alpha1 beta1 sc v v1 ht ht1 => //= 
-     ns IH h w b alpha1 beta1 sc v v1 ht ht1 nsL [Hwf Hw Hb] Ha Vh Vab.
+     ns IH h w b alpha1 beta1 sc v v1 ht ht1 nsL Hwf Vh Vab.
 have Vhget : valid_eval w b (hget w b h ht).
-  by case: Vh => _ _  /(_ w b h Hwf Ha) /htable_valid_prop.
+  have [Hwf1 Ha _ _] := Hwf.
+  by case: Vh => _ _  /(_ w b h Hwf1 Ha) /htable_valid_prop.
 case: (ifP (_ =? unknown)) => Hh; last first.
   have Vahget : valid_answer (hget w b h ht).
     apply: valid_eval_answer Vhget _.
@@ -533,9 +537,7 @@ case: (ifP (_ =? unknown)) => Hh; last first.
         rewrite -ltnS; move/ncells_cmove :  i1j1M.
         by rewrite /make_move mE /mk_move [_ lor w]lorC => <-.
       - move/find_moves_forced_wf_pos : E.
-        by rewrite lorC; apply; split.
-      - case/find_moves_forced_cmove : E => // i1 [j1 [-> i1j1M]].
-        by rewrite /make_move [_ lor w]lorC; apply: land_cmove.
+        by rewrite lorC; apply.
       - suff -> : beta1 = win by [].
         move: Vab Hh3; rewrite /valid_ab; case: eqP => // _.
           by case/orP => /eqP->.
@@ -548,10 +550,9 @@ case: (ifP (_ =? unknown)) => Hh; last first.
       by rewrite -h2E.
     apply: process_correct => //.
     - by move/eqP: Hh2 => ->.
-    - have : 0 < seq.size ms by apply: find_moves_moves_size E; split.
+    - have : 0 < seq.size ms by apply: find_moves_moves_size E.
       case: ms E => // m ms /find_moves_moves_cmove HH _.
-      case: (HH m); first by split.
-        by rewrite inE eqxx.
+      case: (HH m) => //; first by rewrite inE eqxx.
       move=> i1 [j1 [i1j1C _ _]].
       have i1Lw : i1 < nwidth by case/and3P: i1j1C.
       have j1Lh : j1 < nheight by case/and3P: i1j1C.
@@ -584,9 +585,7 @@ case: (ifP (_ =? unknown)) => Hh; last first.
       rewrite -ltnS; move/ncells_cmove :  i1j1M.
       by rewrite /make_move mE /mk_move [_ lor w]lorC => <-.
     - move/find_moves_forced_wf_pos : E.
-      by rewrite lorC; apply; split.
-    - case/find_moves_forced_cmove : E => // i1 [j1 [-> i1j1M]].
-      by rewrite /make_move [_ lor w]lorC; apply: land_cmove.
+      by rewrite lorC; apply.
     - suff -> : alpha1 = loss by [].
         move: Vab Hh3; rewrite /valid_ab; case: eqP => // _.
       by case/andP=> /eqP->.    
@@ -598,10 +597,9 @@ case: (ifP (_ =? unknown)) => Hh; last first.
     by rewrite -ht2E.
   apply: process_correct => //.
   - by move/eqP: Hh1 => ->.
-  - have : 0 < seq.size ms by apply: find_moves_moves_size E; split.
+  - have : 0 < seq.size ms by apply: find_moves_moves_size E.
     case: ms E => // m ms /find_moves_moves_cmove HH _.
-    case: (HH m); first by split.
-      by rewrite inE eqxx.
+    case: (HH m) => //; first by rewrite inE eqxx.
     move=> i1 [j1 [i1j1C _ _]].
     have i1Lw : i1 < nwidth by case/and3P: i1j1C.
     have j1Lh : j1 < nheight by case/and3P: i1j1C.
@@ -632,9 +630,7 @@ case E : find_moves => [||m|ms] //.
     rewrite -ltnS; move/ncells_cmove :  i1j1M.
     by rewrite /make_move mE /mk_move [_ lor w]lorC => <-.
   - move/find_moves_forced_wf_pos : E.
-    by rewrite lorC; apply; split.
-  - case/find_moves_forced_cmove : E => // i1 [j1 [-> i1j1M]].
-    by rewrite /make_move [_ lor w]lorC; apply: land_cmove.
+    by rewrite lorC; apply.
   - by apply: valid_ab_rev.
   move=> Hasc2 Hesc2 Hth2; split => //.
   - by rewrite -rsc2E; apply: valid_answer_rev.
@@ -644,10 +640,9 @@ case E : find_moves => [||m|ms] //.
   by rewrite -ht2E.
 apply: process_correct => //.
 - by move/eqP: Hh => ->.
-- have : 0 < seq.size ms by apply: find_moves_moves_size E; split.
+- have : 0 < seq.size ms by apply: find_moves_moves_size E.
   case: ms E => // m ms /find_moves_moves_cmove HH _.
-  case: (HH m); first by split.
-    by rewrite inE eqxx.
+  case: (HH m) => //; first by rewrite inE eqxx.
   move=> i1 [j1 [i1j1C _ _]].
   have i1Lw : i1 < nwidth by case/and3P: i1j1C.
   have j1Lh : j1 < nheight by case/and3P: i1j1C.
@@ -671,10 +666,9 @@ Definition wf_posb w b :=
               (i == decr (lsl one (of_nat j)))) (iota 0 nhorizontal))
        (iota 0 nwidth)].
 
-Lemma wf_posb_correct w b : wf_posb w b -> wf_pos w b /\ w land b = 0.
+Lemma wf_posb_correct w b : wf_posb w b -> wf_pos w b.
 Proof.
 case/and5P => /eqP wbswh_eq0 NWw Nwb /eqP wb_eq0 /allP HiE.
-split; last by [].
 suff Hwf : wf_state (w lor b).
   split => //; first by rewrite -(@is_won_cwin w b).
   by rewrite -(@is_won_cwin b w) // lorC.
@@ -705,7 +699,7 @@ Definition htop_eval w b ht :=
 Lemma htopeval_correct w b ht : 
  wf_posb w b -> valid_htable ht -> valid_eval w b (htop_eval w b ht).
 Proof.
-move=> /wf_posb_correct[Hwf Ha] Hht.
+move=> /wf_posb_correct Hwf Hht.
 have := @alphabeta_correct (1 + nheight * nwidth) 0 w b loss win zero ht.
 rewrite /htop_eval.
 case: alpha_beta => sc1 v1 ht1 /(_ sc1 v1 ht1) [] //.

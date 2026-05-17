@@ -1538,7 +1538,7 @@ Qed.
 Lemma find_moves_win w b : 
   wf_pos w b -> find_moves w b = Win -> eval w b = WIN.
 Proof.
-move=> [wf_wb ncw_w ncw_b] /eqP.
+move=> [wf_wb wbA ncw_w ncw_b] /eqP.
 rewrite /find_moves fms_win_corect // => /existsP[i /existsP [j /andP[cM cW]]].
 apply/eqP/eval_winP; right; split => //.
 exists i; exists j; split => //.
@@ -1548,7 +1548,7 @@ Qed.
 Lemma find_moves_draw w b :
   wf_pos w b -> find_moves w b = Draw -> eval w b = DRAW.
 Proof.
-move=> [wf_wb ncw_w ncw_b] /eqP.
+move=> [wf_wb wbA ncw_w ncw_b] /eqP.
 rewrite /find_moves fms_draw_corect // => Nhm.
 by apply/eqP/eval_drawP; split; rewrite ?(negPf Nhm).
 Qed.
@@ -1556,7 +1556,7 @@ Qed.
 Lemma find_moves_forced w b m : 
   wf_pos w b -> find_moves w b = Forced m -> eval w b = wcomp (eval b (w lor m)).
 Proof.
-move=> [wf_wb ncw_w ncw_b] /eqP /(fms_forced_corect wf_wb) // => []
+move=> [wf_wb wbA ncw_w ncw_b] /eqP /(fms_forced_corect wf_wb) // => []
    [Hf [i [j [mE cM1 cW1]]]].
 have iLw : i < nwidth by case/and3P: cM1.
 have jLh : j < nheight by case/and3P: cM1.
@@ -1586,12 +1586,13 @@ Qed.
 Lemma find_moves_forced_wf_pos w b m : 
   wf_pos w b -> find_moves w b = Forced m -> wf_pos b (w lor m).
 Proof.
-move=> [wf_wb ncw_w ncw_b] /eqP /(fms_forced_corect wf_wb) // => []
+move=> [wf_wb wfA ncw_w ncw_b] /eqP /(fms_forced_corect wf_wb) // => []
    [Hf [i [j [mE cM1 cW1]]]].
 have iLw : i < nwidth by case/and3P: cM1.
 have jLh : j < nheight by case/and3P: cM1.
 have -> : w lor m = mk_move w i j by rewrite mE.
 split => //; first by apply: wf_state_cmove.
+  by apply: land_cmove.
 by apply: Hf.
 Qed.
 
@@ -1600,7 +1601,7 @@ Lemma find_moves_forced_cmove w b m :
  (m = lsl 1 (of_nat i * horizontal + of_nat j)) /\
  cmove (w lor b) i j.
 Proof.
-move=> [wf_wb ncw_w ncw_b] /eqP /(fms_forced_corect wf_wb) // => []
+move=> [wf_wb wbA ncw_w ncw_b] /eqP /(fms_forced_corect wf_wb) // => []
    [Hf [i [j [mE cM1 cW1]]]].
 by exists i; exists j; split.
 Qed.
@@ -1608,11 +1609,12 @@ Qed.
 Lemma find_moves_moves_wf_pos w b l m : 
   wf_pos w b -> find_moves w b = Moves l -> m \in l -> wf_pos b (w lor m.1).
 Proof.
-move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // => []
+move=> [wf_wb wbA ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // => []
    [Hww Hwb Hs Hi Hc].
 case: m => i j /Hi [i1 [j1 [cM1 iE]]].
 have -> : w lor i = mk_move w i1 j1 by rewrite iE.
 split => //=; first by apply: wf_state_cmove.
+  by apply: land_cmove.
 by apply: Hww.
 Qed.
 
@@ -1620,7 +1622,7 @@ Lemma find_moves_moves_cmove_in w b i j l :
   wf_pos w b -> find_moves w b = Moves l -> cmove (w lor b) i j -> 
   (lsl 1 (of_nat i * horizontal + of_nat j)) \in (map fst l).
 Proof.
-move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // => []
+move=> [wf_wb wbA ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // => []
    [Hww Hwb Hs Hi Hc] /Hc [/= v1 Hv1].
 by apply/mapP=> /=; exists (lsl 1 (of_nat i * horizontal + of_nat j), v1).
 Qed.
@@ -1628,14 +1630,14 @@ Qed.
 Lemma find_moves_moves_size w b l :
   wf_pos w b -> find_moves w b = Moves l -> 0 < size l.
 Proof.
-move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // [].
+move=> [wf_wb wbA ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // [].
 by move=> _ _ [].
 Qed.
 
 Lemma find_moves_moves_uniq w b l :
   wf_pos w b -> find_moves w b = Moves l -> uniq (map fst l).
 Proof.
-move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // [].
+move=> [wf_wb wbA ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // [].
 by move=> _ _ [].
 Qed.
 
@@ -1645,7 +1647,7 @@ Lemma find_moves_moves_cmove w b l (m : int * int) :
     m.1 = lsl 1 (of_nat i * horizontal + of_nat j)].
 Proof.
 case: m => m1 l1.
-move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // => [].
+move=> [wf_wb wbA ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // => [].
 move=> [Hcm _ _ He _] /He [i2 [j2 [i2j2C m1E]]].
 by exists i2; exists j2; split => //; apply: Hcm.
 Qed.
@@ -1654,7 +1656,7 @@ Lemma find_moves_moves_mem w b l i j :
     wf_pos w b -> find_moves w b = Moves l -> cmove (w lor b) i j -> 
     exists j1, ((lsl 1 (of_nat i * horizontal + of_nat j)), j1) \in l.
 Proof.
-by move=> [wf_wb ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // => []
+by move=> [wf_wb wbA ncw_w ncw_b] /eqP /(fms_moves_corect wf_wb) // => []
  [_ _ _ _ Hcm /Hcm].
 Qed.
 
