@@ -749,8 +749,7 @@ have : opzs height (get_column w (of_nat i)).
 by rewrite opzsE'' // => /andP[_ /eqP->]; rewrite prednK // expn_gt0.
 Qed.
 
-Lemma cell_lor s1 s2 i j : 
-  cell (s1 lor s2) i j =  (cell s1 i j)  ||  (cell s2 i j).
+Lemma cell_lor s1 s2 i j : cell (s1 lor s2) i j =  cell s1 i j || cell s2 i j.
 Proof. by rewrite [LHS]lor_spec. Qed.
 
 Lemma cell_height s i : i < nwidth -> wf_state s -> ~~ cell s i nheight.

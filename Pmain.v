@@ -83,3 +83,5 @@ suff <- : htop_eval empty_state empty_state eh4 = win.
 vm_cast_no_check (refl_equal win).
 Qed.
 
+Print eval.
+Print eval_aux.

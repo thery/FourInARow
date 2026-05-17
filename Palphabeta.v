@@ -115,7 +115,7 @@ Qed.
 
 Lemma get_max_nil : get_max [::] = eval w b.
 Proof.
-rewrite evalS (negPf wNw) /= wbH /get_max.
+rewrite evalS (negPf wNw) (negPf wNb) /= wbH /get_max.
 case/existsP : wbH => /= i /existsP [/= j ijM].
 rewrite (bigD1 i) //= maxnA [in RHS](bigD1 i) //=; congr maxn.
   rewrite (bigD1 j) ?andbT //= maxnA [in RHS](bigD1 j) //=; congr maxn.
@@ -242,7 +242,8 @@ Proof.
 move => ijM.
 have iLw : i < nwidth by case/and3P: ijM.
 have jLh : j < nheight by case/and3P: ijM.
-rewrite [X in _ <= X]evalS /= (negPf wNw) ifT; last by apply: cmove_has_move ijM.
+rewrite [X in _ <= X]evalS /= (negPf wNw) (negPf wNb) ifT; last first.
+  by apply: cmove_has_move ijM.
 rewrite (bigD1 (Ordinal iLw)) //= (leq_trans  _ (leq_maxl _ _)) //.
 by rewrite (bigD1 (Ordinal jLh)) //= leq_maxl.
 Qed.
@@ -452,7 +453,7 @@ case: (neqbP _ draw) => rs2Ed; last first.
     - by move/valid_evalE: vEs2; case; case => ->.
     by move/valid_evalE: vEs2; case; case => ->.
   suff -> : eval w b = WIN by rewrite s2El.
-  apply/eqP/eval_winP; right.
+  apply/eqP/eval_winP; right; split => //.
   exists i; exists j; split => //.
   rewrite -mmE.
   move: vEs2; rewrite /valid_eval s2El.
