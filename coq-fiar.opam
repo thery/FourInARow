@@ -1,0 +1,47 @@
+# This file was generated from `meta.yml`, please do not edit manually.
+# Follow the instructions on https://github.com/coq-community/templates to regenerate.
+
+opam-version: "2.0"
+maintainer: "thery@sophia.inria.fr"
+version: "dev"
+
+homepage: "https://github.com/thery/fiar"
+dev-repo: "git+https://github.com/thery/fiar.git"
+bug-reports: "https://github.com/thery/fiar/issues"
+license: "MIT"
+
+synopsis: "Four In A Row in Rocq"
+description: """
+Four-In-a-Row in Rocq
+
+
+| File                              |  Content                                 | 
+| --------------------------------- | -----------------------------------------| 
+| [ssrint](./ssrint.v)              | native int for mathcomp                  | 
+| [FourInARow](./FourInARow.v)      | the evaluator                            | 
+| [Pbasic](./Pbasic.v)              | basic definitions and properties         |
+| [Pmoves](./Pmoves.v)              | move generator                           |
+| [Phash](./Phash.v)                | hash table                               |
+| [Pev1](./Pev1.v)                  | first position                           |
+| [Pev2](./Pev2.v)                  | second position                          |
+| [Pev3](./Pev3.v)                  | third position                           |
+| [Pev4](./Pev4.v)                  | fourth position                          |
+| [Pmain](./Pmain.v)                | main theorem                             |
+
+A note about this development is available 
+[here](https://inria.hal.science/hal-05625464)."""
+
+build: [make "-j%{jobs}%"]
+install: [make "install"]
+depends: [
+  "coq" {(>= "9.1")}
+  "rocq-mathcomp-ssreflect" {(>= "2.5.0")}
+]
+
+tags: [
+  "keyword:four-in-a-row"
+  "logpath:FourInARow"
+]
+authors: [
+  "Laurent Théry"
+]
