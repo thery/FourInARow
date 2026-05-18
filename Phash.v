@@ -465,8 +465,7 @@ rewrite /FourInARow.min; case: (_ ?= _).
 by exact: Hv.
 Qed.
 
-Definition valid_eval w b s :=
-     (down_score s <= eval w b <= up_score s)%N.
+Definition valid_eval w b s := down_score s <= eval w b <= up_score s.
 
 Lemma valid_eval_unknown w b : valid_eval w b unknown.
 Proof. by rewrite /valid_eval; case/or3P: (evalOr w b) => /eqP->. Qed.
@@ -860,7 +859,7 @@ Qed.
 
 Lemma valid_has_table_hput w b wg s h ht :
   valid_pegs (w lor b) -> w land b = 0 ->
-  valid_eval  w b s ->
+  valid_eval w b s ->
   valid_htable ht ->
   valid_htable (hput w b wg s h ht).
 Proof.

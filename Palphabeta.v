@@ -503,16 +503,16 @@ Qed.
 
 End Process.
 
-Lemma alphabeta_correct ns h w b (alpha1 beta1 : int) v ht sc v1 ht1 : 
+Lemma alphabeta_correct ns h w b (alpha beta : int) v ht sc v1 ht1 : 
   ncells (w lor b) < ns ->
   valid_pos w b ->
   valid_htable ht ->
-  valid_ab alpha1 beta1 ->
-  alpha_beta ns h w b alpha1 beta1 v ht =  PRes sc v1 ht1 ->
+  valid_ab alpha beta ->
+  alpha_beta ns h w b alpha beta v ht =  PRes sc v1 ht1 ->
   [/\ valid_answer sc, valid_eval w b sc & valid_htable ht1].
 Proof.
-elim: ns h w b alpha1 beta1 sc v v1 ht ht1 => //= 
-     ns IH h w b alpha1 beta1 sc v v1 ht ht1 nsL wbV Vh Vab.
+elim: ns h w b alpha beta sc v v1 ht ht1 => //= 
+     ns IH h w b alpha beta sc v v1 ht ht1 nsL wbV Vh Vab.
 have Vhget : valid_eval w b (hget w b h ht).
   have [wbV1 Ha _ _] := wbV.
   by case: Vh => _ _  /(_ w b h wbV1 Ha) /valid_entries_prop.
@@ -531,14 +531,14 @@ case: (ifP (_ =? unknown)) => Hh; last first.
         by left; apply: Or32.
       by rewrite /valid_eval (find_moves_draw _ E).
     - case E1 : alpha_beta => [sc2 v2 ht2] [rsc2E v2E h2E].
-      have [] := IH (h + 1) b (make_move m w) (rev_val beta1) 
+      have [] := IH (h + 1) b (make_move m w) (rev_val beta) 
                     (rev_val draw) sc2 v v2 ht ht2 => //.
       - case/find_moves_forced_cmove : E => // i1 [j1 [mE i1j1M]].
         rewrite -ltnS; move/ncells_cmove :  i1j1M.
         by rewrite /make_move mE /mk_move [_ lor w]lorC => <-.
       - move/find_moves_forced_valid_pos : E.
         by rewrite lorC; apply.
-      - suff -> : beta1 = win by [].
+      - suff -> : beta = win by [].
         move: Vab Hh3; rewrite /valid_ab; case: eqP => // _.
           by case/orP => /eqP->.
         by case/andP=> _ /eqP.
@@ -565,7 +565,7 @@ case: (ifP (_ =? unknown)) => Hh; last first.
     - rewrite /valid_scores /get_max big1 //=  => i _.
       rewrite big1 => // j /andP[ijM /negP[]].
       by apply: find_moves_moves_cmove_in E _.
-    - suff -> : beta1 = win by [].
+    - suff -> : beta = win by [].
       move: Vab Hh3; rewrite /valid_ab; case: eqP => // _.
         by case/orP => /eqP->.
       by case/andP=> _ /eqP.
@@ -580,13 +580,13 @@ case: (ifP (_ =? unknown)) => Hh; last first.
     by rewrite /valid_eval (find_moves_draw _ E).
   - case E1 : alpha_beta => [sc2 v2 ht2] [rsc2E v2E ht2E].
     have [] := IH (h + 1) b (make_move m w) (rev_val draw) 
-                  (rev_val alpha1) sc2 v v2 ht ht2 => //.
+                  (rev_val alpha) sc2 v v2 ht ht2 => //.
     - case/find_moves_forced_cmove : E => // i1 [j1 [mE i1j1M]].
       rewrite -ltnS; move/ncells_cmove :  i1j1M.
       by rewrite /make_move mE /mk_move [_ lor w]lorC => <-.
     - move/find_moves_forced_valid_pos : E.
       by rewrite lorC; apply.
-    - suff -> : alpha1 = loss by [].
+    - suff -> : alpha = loss by [].
         move: Vab Hh3; rewrite /valid_ab; case: eqP => // _.
       by case/andP=> /eqP->.    
     move=> Hasc2 Hesc2 Hth2; split => //.
@@ -612,7 +612,7 @@ case: (ifP (_ =? unknown)) => Hh; last first.
   - rewrite /valid_scores /get_max big1 //=  => i _.
     rewrite big1 => // j /andP[ijM /negP[]].
     by apply: find_moves_moves_cmove_in E _.
-  - suff -> : alpha1 = loss by [].
+  - suff -> : alpha = loss by [].
       move: Vab Hh3; rewrite /valid_ab; case: eqP => // _.
     by case/andP=> /eqP->.    
   by apply: find_moves_moves_uniq E.
@@ -624,8 +624,8 @@ case E : find_moves => [||m|ms] //.
     by left; apply: Or32.
   by rewrite /valid_eval (find_moves_draw _ E).
 - case E1 : alpha_beta => [sc2 v2 ht2] [rsc2E v2E ht2E].
-  have [] := IH (h + 1) b (make_move m w) (rev_val beta1) 
-                 (rev_val alpha1) sc2 v v2 ht ht2 => //.
+  have [] := IH (h + 1) b (make_move m w) (rev_val beta) 
+                 (rev_val alpha) sc2 v v2 ht ht2 => //.
   - case/find_moves_forced_cmove : E => // i1 [j1 [mE i1j1M]].
     rewrite -ltnS; move/ncells_cmove :  i1j1M.
     by rewrite /make_move mE /mk_move [_ lor w]lorC => <-.
