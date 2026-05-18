@@ -17,11 +17,12 @@ Four-In-a-Row in Rocq
 
 | File                              |  Content                                 | 
 | --------------------------------- | -----------------------------------------| 
-| [ssrint](./ssrint.v)              | native int for mathcomp                  | 
+| [ssr_int](./ssr_int.v)            | native int for mathcomp                  | 
 | [FourInARow](./FourInARow.v)      | the evaluator                            | 
 | [Pbasic](./Pbasic.v)              | basic definitions and properties         |
 | [Pmoves](./Pmoves.v)              | move generator                           |
 | [Phash](./Phash.v)                | hash table                               |
+| [Palphabeta](./Palphabeta.v)      | alpha beta pruning                       |
 | [Pev1](./Pev1.v)                  | first position                           |
 | [Pev2](./Pev2.v)                  | second position                          |
 | [Pev3](./Pev3.v)                  | third position                           |
