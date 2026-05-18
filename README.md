@@ -4,10 +4,7 @@ Follow the instructions on https://github.com/coq-community/templates to regener
 --->
 # FourInARow
 
-[![Docker CI][docker-action-shield]][docker-action-link]
 
-[docker-action-shield]: https://github.com/thery/fiar/actions/workflows/docker-action.yml/badge.svg?branch=master
-[docker-action-link]: https://github.com/thery/fiar/actions/workflows/docker-action.yml
 
 
 
