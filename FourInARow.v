@@ -20,27 +20,18 @@ Definition nwidth := 7%nat.
 Definition height := 6.
 Definition nheight := 6%nat.
 (* Shift for moving horizontally *)
-Definition horizontal := Eval compute in height + 1.
-Definition nhorizontal := Eval compute in (nheight + 1)%nat.
-Definition horizontal2 := Eval compute in 2 * horizontal.
+Definition horizontal := height + 1.
+Definition nhorizontal := (nheight + 1)%nat.
+Definition horizontal2 := 2 * horizontal.
 (* Shift for moving vertically *)
 Definition vertical := 1.
-Definition vertical2 := Eval compute in 2 * vertical.
+Definition vertical2 := 2 * vertical.
 (* Shift for moving up right *)
-Definition up_right := Eval compute in horizontal + 1.
-Definition up_right2 := Eval compute in 2 * up_right.
+Definition up_right := horizontal + 1.
+Definition up_right2 := 2 * up_right.
 (* Shift for moving up left *)
-Definition up_left := Eval compute in horizontal - 1.
-Definition up_left2 := Eval compute in 2 * up_left.
-
-Register horizontal as Inline.
-Register horizontal2 as Inline.
-Register vertical as Inline.
-Register vertical2 as Inline.
-Register up_right as Inline.
-Register up_right2 as Inline.
-Register up_left as Inline.
-Register up_left2 as Inline.
+Definition up_left := horizontal - 1.
+Definition up_left2 := 2 * up_left.
 
 (* Size of the board *)
 Definition size := width * height.
@@ -241,8 +232,6 @@ fms columns res =
 Proof.
 by case: columns.
 Qed.
-
-Compute PArray.max_length.
 
 End FindMoves.
 

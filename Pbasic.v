@@ -797,6 +797,7 @@ Lemma bit_cell s i :
   bit s i = cell s (to_nat i %/ nhorizontal) (to_nat i %% nhorizontal).
 Proof. by rewrite [in LHS](of_nat_int_add_mod i horizontal). Qed.
 
+
 Lemma is_won_cwin w b : valid_pegs (w lor b) -> is_won w = cwin w.
 Proof.
 move=> Hw.
@@ -809,16 +810,11 @@ have Hv k l m : k * horizontal + l + m * horizontal = (k + m) * horizontal + l.
 have Hr k l m : 
    k * horizontal + l + m * up_right =  (k + m) * horizontal + (l + m).
   have -> : up_right = horizontal + 1 by [].
-  rewrite !(mul_add_distr_r, mul_add_distr_l) -!add_assoc; congr (_ + _).
-  rewrite add_comm -add_assoc; congr (_ + _).
-  by rewrite mul_comm mul_1_l add_comm.
+  by ring.
 have Hl k l m : 
   k * horizontal + l + m * up_left = (k + m) * horizontal + (l - m).
   have -> : up_left = horizontal - 1 by [].
-  rewrite !minus_addE !(mul_add_distr_r, mul_add_distr_l) -!add_assoc; congr (_ + _).
-  rewrite add_comm -!add_assoc; congr (_ + _).
-  rewrite add_comm; congr (_ + _).
-  by rewrite mul_comm mul_N1_l.
+  by ring.
 rewrite bit_is_won.
 apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
   rewrite !inE => /or4P[]/eqP-> /and4P[Hb1 Hb2 Hb3 Hb4].
