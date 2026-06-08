@@ -10,11 +10,13 @@ Require Import Pmoves.
 Require Import Phash.
 Require Import Palphabeta.
 Require Import FourInARow.
+Require Import FourInARow67.
+Require Import Eval67.
 
 (******************************************************************************)
 (*                                                                            *)
 (*                                                                            *)
-(*    Forth position                                                          *)
+(*    Third position                                                          *)
 (*                                                                            *)
 (*                                                                            *)
 (******************************************************************************)
@@ -25,26 +27,28 @@ Import Uint63Axioms.
 Import Uint63.
 Open Scope uint63_scope.
 
-Definition ev4 := (
-                 "_______"
-              ++ "_______"
-              ++ "_______"
-              ++ "_______"
-              ++ "___O___"
-              ++ "___X___")%string.
+Definition ev6 := (
+                 "______"
+              ++ "______"
+              ++ "______"
+              ++ "______"
+              ++ "______"
+              ++ "______"
+              ++ "_X___O")%string.
 
-Definition ew4 :=  (get_position ev4).1.
-Definition eb4 :=  (get_position ev4).2.
+Definition ew6 :=  (get_position 6 7 ev6).1.
+Definition eb6 :=  (get_position 6 7 ev6).2.
 
-Lemma eval_ev4E : top_eval ew4 eb4 = win.
+Lemma eval_ev6E : top_eval67 ew6 eb6 = win.
 Proof.
 native_cast_no_check (refl_equal win).
 Time Qed.
 
-Lemma eval_ev4 : eval ew4 eb4 = WIN.
+Lemma eval_ev6 : eval 6 7 ew6 eb6 = WIN.
 Proof.
-suff : valid_eval ew4 eb4 win.
-  by rewrite /valid_eval; case/or3P: (evalOr ew4 eb4) => /eqP->.
-rewrite -eval_ev4E.
-by apply: topeval_correct.
+suff : valid_eval 6 7 ew6 eb6 win.
+  by rewrite /valid_eval; case/or3P: (@evalOr 6 7 isT isT ew6 eb6) => /eqP->.
+rewrite -eval_ev6E.
+by apply: topeval67_correct.
 Qed.
+

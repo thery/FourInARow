@@ -24,32 +24,85 @@ Unset Printing Implicit Defensive.
 (*                                                                            *)
 (******************************************************************************)
 
-Lemma nhorizontalLwB : nhorizontal < nwB.
+Section Basic.
+
+Variables width height : int.
+Notation nhorizontal := (nhorizontal height).
+Notation nwidth := (nwidth width).
+Notation nheight := (nheight height).
+Notation horizontal := (horizontal height).
+Notation all_set := (all_set width height).
+Notation number_of_cells := (number_of_cells width height).
+Notation first_column := (first_column height).
+Notation full_first_column := (full_first_column height).
+Notation bottom := (bottom width height).
+Notation top := (top width height).
+Notation up_left := (up_left height).
+Notation up_right := (up_right height).
+Notation is_won := (is_won height).
+Notation columns := (columns width height).
+Notation fms := (fms width height).
+Notation get_border := (get_border width height).
+Notation fmt := (fmt height).
+Notation values := (values width height).
+
+Notation size := seq.size.
+Notation "t .[ i ]" := (get t i)
+  (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (set t i a)
+  (at level 1, left associativity, format "t .[ i <- a ]").
+
+Hypothesis wh_hyp : nwidth * nhorizontal < ndigits.
+Hypothesis w_hyp : 3 < nwidth.
+Hypothesis h_hypL : 3 < nheight.
+Hypothesis h_hypU : nheight.+1 < ndigits.
+
+Lemma nhorizontalE : nhorizontal = nheight.+1.
 Proof.
-rewrite -[nhorizontal]/(to_nat horizontal).
-by apply: to_nat_bounded.
+rewrite [X in X = _]to_nat_add ?addn1 //.
+by apply: leq_ltn_trans ndigitsLwB; rewrite ltnW.
 Qed.
 
-Lemma nwidthLwB : nwidth < nwB.
+Lemma nhorizontal_gt0 : 0 < nhorizontal.
+Proof. by rewrite nhorizontalE. Qed.
+
+Lemma nhorizontalLd : nhorizontal < ndigits.
 Proof.
-rewrite -[nwidth]/(to_nat width).
-by apply: to_nat_bounded.
+apply: ltn_trans wh_hyp.
+rewrite  -[X in X < _]mul1n ltn_mul2r.
+by rewrite nhorizontalE (ltn_trans _ w_hyp).
 Qed.
+
+Lemma nwidthLd : nwidth < ndigits.
+Proof.
+apply: ltn_trans wh_hyp.
+rewrite  -[X in X < _]muln1 ltn_mul2l.
+by rewrite (ltn_trans _ w_hyp) //= nhorizontalE ltnS (ltn_trans _ h_hypL).
+Qed.
+
+Lemma nhorizontalLwB : nhorizontal < nwB.
+Proof. by apply: to_nat_bounded. Qed.
+
+Lemma nheightLwB : nheight < nwB.
+Proof. by apply: ltn_trans nhorizontalLwB; rewrite nhorizontalE. Qed.
+
+Lemma nwidthLwB : nwidth < nwB.
+Proof. by apply: to_nat_bounded. Qed.
 
 Lemma whLd : nwidth * nhorizontal < ndigits.
 Proof. by []. Qed.
 
-Lemma whLw : nwidth * nhorizontal < nwB.
+Lemma whLwB : nwidth * nhorizontal < nwB.
 Proof. by apply: ltn_trans whLd ndigitsLwB. Qed.
 
 Lemma whE : to_nat (width * horizontal) = (nwidth * nhorizontal)%N.
-Proof. by rewrite to_nat_mul // whLw. Qed.
+Proof. by rewrite to_nat_mul // whLwB. Qed.
 
 Lemma ihLwh i: i < nwidth -> i * nhorizontal < nwidth * nhorizontal.
-Proof. by move=> iLw; rewrite ltn_mul2r iLw. Qed.
+Proof. by move=> iLw; rewrite ltn_mul2r iLw nhorizontalE. Qed.
 
 Lemma ihLd i : i < nwidth -> i * nhorizontal < ndigits.
-Proof. by move=> /ihLwh/ltn_trans ->. Qed.
+Proof. by move=> /ihLwh/ltn_trans -> //; apply: whLd. Qed.
 
 Lemma ihLw i : i < nwidth -> i * nhorizontal < nwB.
 Proof. by move=> /ihLd/ltn_trans/(_ ndigitsLwB). Qed.
@@ -67,7 +120,7 @@ Proof.
 move=> iLw jLh.
 apply: leq_trans (_ : i * nhorizontal + nhorizontal <= _).
   by rewrite ltn_add2l.
-by rewrite addnC -mulSn leq_mul2r iLw.
+by rewrite addnC -mulSn leq_mul2r iLw orbT.
 Qed.
 
 Lemma ihjLd i j : 
@@ -83,7 +136,7 @@ Lemma ihjE i j :
   to_nat (of_nat i * horizontal + of_nat j) = (i * nhorizontal + j)%N.
 Proof.
 move=> iLw jLh.
-have jLw : j < nwB by apply: ltn_trans nwidthLwB.
+have jLw : j < nwB by apply: ltn_trans nhorizontalLwB.
 by rewrite to_nat_add ihE // of_natK // ihjLw.
 Qed.
 
@@ -98,53 +151,61 @@ case: (ltngtP i1 i2) => // [i1Li2|j1Lj2].
   apply: leq_trans (_ : i1.+1 * nhorizontal <= _).
     by rewrite mulSn addnC ltn_add2r.
   apply: leq_trans (leq_addr _ _).
-  by rewrite leq_mul2r.
+  by rewrite leq_mul2r nhorizontalE.
 suff : i2 * nhorizontal + j2 < i1 * nhorizontal + j1.
   by rewrite i1j1E ltnn.
 apply: leq_trans (_ : i2.+1 * nhorizontal <= _).
   by rewrite mulSn addnC ltn_add2r.
 apply: leq_trans (leq_addr _ _).
-by rewrite leq_mul2r.
+by rewrite leq_mul2r nhorizontalE.
 Qed.
+
+Lemma to_nat_number_of_cells : to_nat number_of_cells = (nwidth * nhorizontal)%N.
+Proof. by rewrite to_nat_mul // whLwB. Qed.
   
 Lemma all_set_spec i : bit all_set i = (i <? number_of_cells).
-Proof. by apply: bit_decr. Qed.
+Proof. by apply: bit_decr; apply/nltbP; rewrite to_nat_number_of_cells wh_hyp. Qed.
 
 Lemma first_column_spec i : bit first_column i = (i <? height).
-Proof. by apply: bit_decr. Qed.
+Proof. by apply: bit_decr; apply/nltbP; rewrite ltnW. Qed.
 
 Lemma full_first_column_spec i : bit full_first_column i = (i <? horizontal).
-Proof. by apply: bit_decr. Qed.
+Proof. by apply: bit_decr; apply/nltbP/nhorizontalLd. Qed.
 
 Lemma bottom_spec i : 
   bit bottom i = ((i mod horizontal =? 0) && (i <? width * horizontal)).
 Proof.
 have ncE : to_nat (lsl one number_of_cells) = 2 ^ (nwidth * nhorizontal).
-  by rewrite to_nat_lsl_one;[congr (_ ^ _)|].
+  by rewrite to_nat_lsl_one to_nat_number_of_cells.
 rewrite bitE to_nat_div to_nat_sub ?ncE; last 2 first.
 - by rewrite (@leq_exp2l 2 0).
 - by rewrite nwB_pow ltn_exp2l.
-rewrite subn1 to_nat_decr; last by [].
-rewrite to_nat_lsl_one; last by [].
-rewrite mulnC expnM xm1_sum mulKn; last by rewrite -ltnS prednK ?expn_gt0.
+rewrite subn1 to_nat_decr; last first.
+  by apply/nltbP; rewrite to_nat_lsl_one ?expn_gt0 // nhorizontalLd.
+rewrite to_nat_lsl_one; last by apply: nhorizontalLd.
+rewrite mulnC expnM xm1_sum mulKn; last first.
+  by rewrite -ltnS prednK ?expn_gt0 ?nhorizontalE // (@ltn_exp2l 2 0).
 under eq_bigr do rewrite -expnM.
 rewrite (sum_pow_incr_div_mod (fun i => nhorizontal * i)%N); last 2 first.
 - by [].
-- by move=> j k /andP[jLk _]; rewrite ltn_mul2l.
+- by move=> j k /andP[jLk _]; rewrite ltn_mul2l nhorizontalE.
 rewrite modn_small; last by case: (_ \in _).
 rewrite modn_small ?bool1E; last by [].
 apply/mapP/andP; last first.
   move=> [/neqbP imh /nltbP iLwh].
   rewrite to_nat_mod in imh.
-  rewrite to_nat_mul in iLwh; last by rewrite mulnC whLw.
+  rewrite to_nat_mul in iLwh; last by rewrite whLwB.
   exists (to_nat i %/ nhorizontal); last first.
     by rewrite [LHS](divn_eq _ nhorizontal) imh addn0 mulnC.
-  by rewrite mem_iota add0n ltn_divLR.
+  by rewrite mem_iota add0n ltn_divLR // nhorizontalE.
 move=> [k]; rewrite mem_iota => kLw iE; split.
   by apply/neqbP; rewrite to_nat_mod iE; apply: modnMr.
-apply/nltbP; rewrite iE to_nat_mul ?whLw; last by [].
-by rewrite mulnC ltn_mul2r.
+apply/nltbP; rewrite iE to_nat_mul ?whLw; last by apply: whLwB.
+by rewrite mulnC ltn_mul2r nhorizontalE.
 Qed.
+
+Lemma to_nat_wh :  to_nat (width * horizontal) = (nwidth * nhorizontal)%N.
+Proof. by rewrite to_nat_mul // whLwB. Qed.
 
 Lemma top_spec i : 
   bit top i = ((i mod horizontal =? height) && (i <? width * horizontal)).
@@ -152,33 +213,36 @@ Proof.
 rewrite bit_lsl bottom_spec.
 have [dLi|/negP] := nlebP.
   suff -> : i <? width * horizontal = false by rewrite orbT andbF.
-  by case: nltbP => // /(leq_ltn_trans dLi).
+  case: nltbP => // /(leq_ltn_trans dLi).
+  by rewrite ltnNge // to_nat_wh ltnW.
 rewrite -ltnNge => iLd.  
 have [iLh|/negP] := nltbP.
   suff -> : i mod horizontal =? height = false by [].
   case: neqbP => //; rewrite to_nat_mod modn_small.
     by move/eqP; case: ltngtP iLh.
-  by apply: ltn_trans iLh _.
+  by apply: ltn_trans iLh _; rewrite [to_nat horizontal]nhorizontalE.
 rewrite -leqNgt => hLi.
 have iLwB := to_nat_bounded i.
 case: neqbP; rewrite to_nat_mod to_nat_sub //; last first.
 case: neqbP=> // /eqP; rewrite to_nat_mod.
-  have hLh : to_nat height < nhorizontal by [].
+  have hLh : to_nat height < nhorizontal by rewrite nhorizontalE.
   rewrite -{1}(modn_small hLh) -{1}[to_nat height]add0n -{1}(subnK hLi).
   by rewrite eqn_modDr mod0n => /eqP->.
 move=> ihmh_eq0.
 case: neqbP; rewrite to_nat_mod; last first.
   case.
-  by rewrite -(subnK hLi) -modnDml ihmh_eq0 add0n modn_small.
+  rewrite -(subnK hLi) -modnDml ihmh_eq0 add0n modn_small //.
+  by rewrite [to_nat horizontal]nhorizontalE.
 move=> imhEh.
 case: nltbP; case: nltbP => //; last first.
   move=> iLwh; rewrite to_nat_sub // => /negP.
   by rewrite -leqNgt => /(leq_trans iLwh); rewrite ltnNge leq_subr.
 move=> /negP; rewrite -leqNgt => iLwh; rewrite to_nat_sub // => ihLwh.
 move: imhEh.
-rewrite -(subnK iLwh) -modnDmr {2}to_nat_mul; last by apply:whLw.
-rewrite modnMr addn0 modn_small; last first.
-  apply: ltn_trans (_ : _ < to_nat height) _; last by [].
+rewrite -(subnK iLwh) -modnDmr {2}to_nat_mul; last by apply: whLwB.
+rewrite modnMl addn0 modn_small; last first.
+  apply: ltn_trans (_ : _ < to_nat height) _; last first.
+    by rewrite [X in _ < X]nhorizontalE.
   by rewrite ltn_subLR // addnC  -ltn_subLR.
 by move=> iwhE; rewrite -iwhE subKn ?ltnn in ihLwh.
 Qed.
@@ -261,6 +325,19 @@ apply/forallP/forallP => /= H i.
 by rewrite bit_logand2_aux; have := H i.
 Qed.
 
+Lemma to_nat_up_left : to_nat up_left = nhorizontal.-1.
+Proof.
+rewrite to_nat_sub ?subn1 ?nhorizontalLwB //.
+by rewrite [X in _ <= X] nhorizontalE.
+Qed.
+
+Lemma to_nat_up_right : to_nat up_right = nhorizontal.+1.
+Proof.
+rewrite to_nat_add ?addn1 ?nhorizontalLwB //.
+apply: ltn_trans (_ : ndigits.+1 < _); first by rewrite ltnS nhorizontalLd.
+by apply: ltn_trans (_ : 2 ^ 9 < _); rewrite // nwB_pow ltn_exp2l.
+Qed.
+
 Lemma bit_is_won s  : 
   is_won s  = [exists i,
                 [exists dir,
@@ -269,7 +346,12 @@ Lemma bit_is_won s  :
                       bit s i, bit s (i + dir),
                           bit s (i + 2 * dir) & bit s (i + 3 * dir)]]].
 Proof.
-rewrite /is_won !bit_logand2 // -!negb_exists.
+rewrite /is_won !bit_logand2 //; last 3 first.
+- apply/nlebP; rewrite to_nat_up_left (leq_trans _ nhorizontalLd) //.
+  by rewrite nhorizontalE //= ltnW.
+- by apply/nlebP; rewrite to_nat_up_right // nhorizontalE.
+- by apply/nlebP; rewrite [X in X <= _]nhorizontalE ltnW.
+rewrite -!negb_exists.
 case: existsP => [[i /and4P[Hb1 Hb2 Hb3 Hb4]]|Hh].
   apply/sym_equal/existsP.
   exists i; apply/existsP; exists horizontal.
@@ -277,15 +359,15 @@ case: existsP => [[i /and4P[Hb1 Hb2 Hb3 Hb4]]|Hh].
 case: existsP => /= [[i /and4P[Hb1 Hb2 Hb3 Hb4]]|Hv].
   apply/sym_equal/existsP.
   exists i; apply/existsP; exists vertical.
-  by rewrite !inE eqxx andTb Hb1 Hb2 Hb3 Hb4.
+  by rewrite !inE eqxx orbT andTb Hb1 Hb2 Hb3 Hb4.
 case: existsP => /= [[i /and4P[Hb1 Hb2 Hb3 Hb4]]|Hur].
   apply/sym_equal/existsP.
   exists i; apply/existsP; exists up_right.
-  by rewrite !inE eqxx andTb Hb1 Hb2 Hb3 Hb4.
+  by rewrite !inE eqxx !orbT andTb Hb1 Hb2 Hb3 Hb4.
 case: existsP => /= [[i /and4P[Hb1 Hb2 Hb3 Hb4]]|Hul].
   apply/sym_equal/existsP.
   exists i; apply/existsP; exists up_left.
-  by rewrite !inE eqxx andTb Hb1 Hb2 Hb3 Hb4.
+  by rewrite !inE eqxx !orbT andTb Hb1 Hb2 Hb3 Hb4.
 apply/sym_equal/idP => /existsP [i /existsP [dir /and5P[]]].
 rewrite !inE; case/or4P => /eqP-> Hb1 Hb2 Hb3 Hb4.
 - by case: Hh; exists i; rewrite Hb1 Hb2 Hb3 Hb4.
@@ -305,24 +387,21 @@ Proof.
 have iB := to_Z_bounded i.
 have jB := to_Z_bounded j.
 case: nltbP => // hLj _.
-have hEh : nhorizontal = (to_nat (height) + 1)%nat by [].
 rewrite /get_column land_spec full_first_column_spec.
 case: nltbP => [|]; last by rewrite andbF.
-by rewrite [X in (_ < X)%nat]hEh addn1 ltnS leqNgt hLj.
+by rewrite [X in (_ < X)]nhorizontalE ltnS leqNgt hLj.
 Qed.
 
 Lemma bit_get_column s i j : 
-  j <=? height ->
+  j <? horizontal ->
  (to_nat i * nhorizontal + to_nat j < nwB)%nat ->
   bit (get_column s i) j = bit s ((i * horizontal) + j).
 Proof.
 have iB := to_Z_bounded i.
 have jB := to_Z_bounded j.
-case: nlebP => // jLh _ ijLw.
-have hEh : nhorizontal = (to_nat (height) + 1)%nat by [].
+case: nltbP => // jLh _ ijLw.
 rewrite /get_column land_spec full_first_column_spec.
-case: nltbP => [_|]; last first.
-  by rewrite [to_nat horizontal]hEh addn1 ltnS.
+case: nltbP => [_|]; last by rewrite jLh.
 have ihE : to_nat (i * horizontal) = (to_nat i * nhorizontal)%nat.
   by rewrite to_nat_mul // (leq_ltn_trans _ ijLw) // leq_addr.
 rewrite andbT bit_lsr; case: nlebP => //.
@@ -330,19 +409,15 @@ by rewrite to_nat_add ihE // leq_addl.
 Qed.
 
 Lemma bit_get_columnW s i j : 
-  i <=? width -> j <=? height ->
+  i <? width -> j <? horizontal ->
   bit (get_column s i) j = bit s ((i * horizontal) + j).
 Proof.
-move=> iLw jLh.
-apply: bit_get_column => //.
-case: nlebP iLw jLh => //; case: nlebP => // jLh iLw _ _.
-apply: leq_ltn_trans (_ : to_nat width * nhorizontal + to_nat height < _)%nat;
-    last first.
-  apply: leq_ltn_trans (_ : 2 ^ 6 < _)%nat; first by [].
-  by rewrite nwB_pow ltn_exp2l.
-apply: leq_trans (_ : to_nat width * nhorizontal + to_nat j <= _)%nat.
-  by rewrite leq_add2r leq_pmul2r.
-by rewrite leq_add2l.
+move=> /nltbP iLw /nltbP jLh.
+apply: bit_get_column; first by apply/nltbP.
+apply: leq_ltn_trans whLwB.
+apply: leq_trans (_ : (to_nat i).+1 * nhorizontal <= _); last first.
+  by rewrite leq_mul2r nhorizontalE.
+by rewrite mulSn addnC leq_add2r ltnW.
 Qed.
 
 (** (one)^*(zero)^+ *)
@@ -432,20 +507,17 @@ move=> iB jB.
 have iB' : i < nwB by apply: leq_trans iB (ltnW nwidthLwB).
 have jB' : j < nwB by apply: leq_trans jB (ltnW nhorizontalLwB).
 have ihjB : i * nhorizontal + j < nwB.
-  apply: ltn_trans (_ : i * nhorizontal + nhorizontal < _).
-    by rewrite ltn_add2l.
-  apply: leq_ltn_trans (_ : nwidth * nhorizontal + nhorizontal < _).
-    by rewrite leq_add2r leq_pmul2r // ltnW.
-  apply: ltn_trans (_ : 2 ^ 6 < _); first by [].
-  by rewrite nwBE Z2Nat.inj_pow.
+  apply: leq_ltn_trans (_ : i.+1 * nhorizontal < _).
+    by rewrite mulSn addnC leq_add2r ltnW.
+  apply: leq_ltn_trans whLwB.
+  by rewrite leq_mul2r nhorizontalE.
 rewrite /cell /get_column land_spec full_first_column_spec.
 case: nltbP => [_|[]]; last first.
   by rewrite of_natK //; apply : leq_trans jB _.
 rewrite andbT bit_lsr.
 case: nlebP => // [] [].
 rewrite to_nat_add; first by by apply: leq_addl.  
-rewrite to_nat_mul ?of_natK //.
-rewrite -[to_nat _]/nhorizontal.
+rewrite to_nat_mul of_natK //; first by rewrite of_natK.
 by apply: leq_ltn_trans ihjB; rewrite leq_addr.
 Qed.
 
@@ -491,9 +563,9 @@ Qed.
 Lemma valid_pegs_true_width w i : 
   valid_pegs w -> bit w i -> (to_nat i %/ nhorizontal < nwidth).
 Proof.
-move=> wVp Hb; rewrite ltn_divLR //.
+move=> wVp Hb; rewrite ltn_divLR; last by rewrite nhorizontalE.
 have /andP[/forallP/(_ i)/implyP/(_ Hb)] := wVp.
-by case: nltbP.
+by move/nltbP; rewrite to_nat_wh.
 Qed.
 
 Lemma valid_pegs_bit_false w i : 
@@ -501,8 +573,8 @@ Lemma valid_pegs_bit_false w i :
 Proof.
 move=> wVp whLi.
 have /andP[/forallP/(_ i)/implyP] := wVp.
-case: bit => // /(_ isT).
-by case: nltbP; rewrite to_nat_mul ?whLw // ltnNge whLi.
+case: bit => // /(_ isT) /nltbP.
+by rewrite to_nat_wh ltnNge whLi.
 Qed.
 
 Lemma bit_get_column_exclude w j k l :
@@ -522,12 +594,12 @@ rewrite !orbF => /negP; rewrite -ltnNge => lLd.
 case: nltbP => // /negP; rewrite -leqNgt => jhLl.
 case: nltbP => // /negP; rewrite -leqNgt => khLl.
 rewrite to_nat_mul 1?of_natK // -[to_nat _]/nhorizontal in jhLl; last first.
-  apply: leq_ltn_trans whLw.
-  by rewrite leq_pmul2r // ltnW.
+  apply: leq_ltn_trans whLwB.
+  by rewrite leq_pmul2r ?nhorizontalE // ltnW.
 rewrite to_nat_mul 1?of_natK // -[to_nat _]/nhorizontal in khLl; last first.
-  apply: leq_ltn_trans whLw.
-  by rewrite leq_pmul2r // ltnW.
-wlog : j k kLw jLw  jhLl khLl kB jB / (j <= k)%nat.
+  apply: leq_ltn_trans whLwB => //.
+  by rewrite leq_pmul2r ?nhorizontalE// ltnW.
+wlog : j k kLw jhLl jLw khLl kB jB / (j <= k)%nat.
   move=> Hbjk Hbj Hbk.
   case: (leqP j k) => [jLk|kLj]; first by apply: Hbjk. 
   by apply/sym_equal/Hbjk => //; apply: ltnW.
@@ -535,8 +607,9 @@ rewrite leq_eqVlt => /orP[/eqP //|jLk].
 rewrite bit_get_column0 //.
 case: nltbP => // [] [].
 rewrite to_nat_sub // ihE //.
-have -> : (to_nat height).+1 = nhorizontal by [].
-by rewrite leq_subRL // addnC -mulSn (leq_trans _ khLl) // leq_pmul2r.
+have -> : (to_nat height).+1 = nhorizontal by rewrite nhorizontalE.
+rewrite leq_subRL // addnC -mulSn (leq_trans _ khLl) // leq_pmul2r //.
+by rewrite nhorizontalE.
 Qed.
 
 Lemma valid_pegsE w : 
@@ -571,11 +644,11 @@ have [wLu|uLw] := (leqP nwidth u).
   rewrite jhE // in jhLi.
   have := @bit_get_column0 w (of_nat j) (i - of_nat j * horizontal).
   case: nltbP => [_|/negP]; first by apply.
-  rewrite -leqNgt to_nat_sub ?jhE // -ltnS -[(to_nat height).+1]/nhorizontal
-        => ijLh _.
+  rewrite -leqNgt to_nat_sub ?jhE // -ltnS -nhorizontalE => ijLh _.
   suff : u < nwidth by rewrite ltnNge wLu.
   apply: leq_trans (ltn_ord j). 
-  by rewrite ltn_divLR // mulSn addnC -ltn_subLR.
+  rewrite ltn_divLR; last by rewrite nhorizontalE.
+  by rewrite mulSn addnC -ltn_subLR.
 have uLwB : (u < nwB)%nat by apply: ltn_trans nwidthLwB.
 pose uo := Ordinal uLw.
 rewrite (bigD1 uo) //= /olor lor_spec.
@@ -604,9 +677,9 @@ rewrite big1 => [|/= j jDu].
   - congr bit.
     apply: to_nat_inj.
     by rewrite to_nat_add uhE iuhE // -divn_eq.
-  - case: nlebP => // [] [].
-    rewrite iuhE -ltnS.
-    by apply: ltn_pmod.
+  - apply/nltbP.
+    rewrite iuhE.
+    by apply: ltn_pmod; rewrite ?nhorizontalE.
   by rewrite iuhE 1?of_natK // -divn_eq.
 have jLwB : (j < nwB)%nat by apply: ltn_trans nwidthLwB.
 rewrite bit_lsl.
@@ -619,8 +692,7 @@ have jhE : to_nat (of_nat j * horizontal) = (j * nhorizontal)%nat.
 rewrite jhE in jhLi.
 have := @bit_get_column0 w (of_nat j) (i - of_nat j * horizontal).
 case: nltbP => [_|/negP]; first by apply.
-rewrite -leqNgt to_nat_sub ?jhE // -ltnS -[(to_nat height).+1]/nhorizontal
-    => ijLh _.
+rewrite -leqNgt to_nat_sub ?jhE // -ltnS -nhorizontalE => ijLh _.
 case/eqP: jDu.
 apply/sym_equal/divn_inv.
 by rewrite jhLi mulSn addnC -ltn_subLR.
@@ -629,9 +701,9 @@ Qed.
 Lemma ltn_to_nat_get_column s i : 
   (to_nat (get_column s i) < 2 ^ nhorizontal)%nat.
 Proof.
-rewrite to_nat_sum -[nhorizontal]/(nheight.+1).
+rewrite to_nat_sum nhorizontalE.
 apply: leq_ltn_trans (sum_pow2 _).
-have /(big_ord_widen _ _)-> : (nheight.+1 <= ndigits)%nat by [].
+have /(big_ord_widen _ _)-> : (nheight < ndigits)%nat by rewrite ltnW.
 have -> /= := @big_mkcond nat _  addn _ 
   (index_enum (ordinal ndigits)) 
   (fun i => i < nheight.+1)%nat (fun i => 2 ^ i)%nat .
@@ -663,14 +735,14 @@ have ->// := to_nat_add_exclude nwidth xpredT
     rewrite -expnD.
     apply: leq_trans (_ : _ <= 2 ^ (nwidth * nhorizontal))%nat _.
       apply: leq_pexp2l => //.
-      by rewrite mulnC -mulnS mulnC leq_pmul2r.
+      by rewrite mulnC -mulnS mulnC leq_pmul2r // nhorizontalE.
     have -> : nwB = (2 ^ ndigits)%nat.
       apply: Nat2Z.inj.
       rewrite nwBE [LHS]Z2Nat.id; last by [].
       by rewrite Z_of_nat_exp.
-    by apply: leq_pexp2l.
-  apply: ltn_trans whLw.
-  by rewrite ltn_pmul2r.
+    by apply: leq_pexp2l => //; apply: ltnW.
+  apply: ltn_trans whLwB.
+  by rewrite ltn_mul2r // [to_nat _]nhorizontalE /=.
 by move=> j k l jLw kLw _ _; apply: bit_get_column_exclude.
 Qed.
 
@@ -684,9 +756,10 @@ rewrite !cell_get_column //; last by apply: ltn_trans yLh.
 have : opzs height (get_column s (of_nat x)).
   have /andP[_ /forallP/(_ (of_nat x))/implyP->//] := wVp.
   by case: nltbP; rewrite of_natK.
-rewrite opzsE // => /existsP[/= u /andP[/nlebP uLh /eqP] ->].
-have uLd : u <? digits.
-  by case: nltbP => // [] []; apply: leq_ltn_trans (isT : nheight < ndigits).
+have hLd : nheight < ndigits by rewrite ltnW.
+rewrite opzsE //; last by apply/nltbP.
+move=> /existsP[/= u /andP[/nlebP uLh /eqP] ->].
+have uLd : u <? digits by apply/nltbP/(leq_ltn_trans uLh).
 rewrite !bit_decr //.
 have yLwB : y < nwB by apply: ltn_trans nhorizontalLwB.
 have zLwB : z < nwB by apply: ltn_trans yLwB.
@@ -696,19 +769,21 @@ Qed.
 
 Lemma to_nat_all_set : to_nat all_set = (2 ^ (nwidth * nhorizontal)).-1.
 Proof.
-rewrite to_nat_decr; last by [].
-rewrite to_nat_lsl_one; last by [].
-by congr (_ ^ _).-1.
+rewrite to_nat_decr; last first.
+  by apply/nltbP; rewrite to_nat_lsl_one ?expn_gt0 // to_nat_number_of_cells.
+by rewrite to_nat_lsl_one to_nat_number_of_cells.
 Qed.
 
 Lemma bottomE : to_nat bottom = \sum_(i < nwidth) 2 ^ (i * nhorizontal).
 Proof.
 rewrite to_nat_div to_nat_all_set.
-rewrite to_nat_decr; last by [].
-rewrite to_nat_lsl_one; last by [].
+rewrite to_nat_decr; last first.
+  by apply/nltbP; rewrite to_nat_lsl_one ?expn_gt0 // nhorizontalLd.
+rewrite to_nat_lsl_one ?nhorizontalLd //.
 suff -> : (2 ^ (nwidth * nhorizontal)).-1 =
        ((2 ^ to_nat horizontal).-1 * \sum_(i < nwidth)  2 ^ (i * nhorizontal))%N.
-  by rewrite mulKn.
+  rewrite mulKn // -ltnS prednK ?expn_gt0 // (@ltn_exp2l 2 0) //.
+  by rewrite [X in _ < X]nhorizontalE.
 have -> : (2 ^ (nwidth * nhorizontal)).-1 = 
           (((2 ^ nhorizontal) ^ nwidth) - 1 ^ nwidth)%N.
   by rewrite mulnC expnM exp1n subn1.
@@ -731,22 +806,24 @@ suff Hf : (to_nat bottom + to_nat w)%N =
         2 ^ to_nat (up_log2 (get_column w (of_nat i))) * 2 ^ (i * nhorizontal).
   rewrite to_nat_add // Hf.
   apply: leq_trans ( _ : 2 ^ (nwidth * nhorizontal) <= _); last first.
-    by rewrite nwB_pow leq_exp2l.
+    by rewrite nwB_pow leq_exp2l // ltnW .
   pose f i := 2 ^ to_nat (up_log2 (get_column w (of_nat i))).
   apply: (sum_exp_bound _ _ f) => i iLn; rewrite /f.
   have : opzs height (get_column w (of_nat i)).
     case/andP: Hw => _ /forallP/(_ (of_nat i))/implyP-> //.
     by apply/nltbP; rewrite of_natK // (ltn_trans _ nwidthLwB).
-  rewrite opzsE'' // => /andP[Hle _].
+  rewrite opzsE''; last by apply/nltbP/ltnW.
+  move => /andP[Hle _].
   apply: leq_ltn_trans (_ : 2 ^ to_nat height < _); first by rewrite leq_exp2l.
-  by rewrite ltn_exp2l.
+  by rewrite ltn_exp2l // nhorizontalE.
 rewrite bottomE valid_pegs_to_natE // -big_split /=.
 apply: eq_bigr => i _.
 rewrite -mulSn; congr (_ * _)%N.
 have : opzs height (get_column w (of_nat i)).
   case/andP: Hw => _ /forallP/(_ (of_nat i))/implyP-> //.
   by apply/nltbP; rewrite of_natK // (ltn_trans _ nwidthLwB).
-by rewrite opzsE'' // => /andP[_ /eqP->]; rewrite prednK // expn_gt0.
+rewrite opzsE''; last by apply/nltbP/ltnW.
+by move => /andP[_ /eqP->]; rewrite prednK // expn_gt0.
 Qed.
 
 Lemma cell_lor s1 s2 i j : cell (s1 lor s2) i j =  cell s1 i j || cell s2 i j.
@@ -756,10 +833,11 @@ Lemma cell_height s i : i < nwidth -> valid_pegs s -> ~~ cell s i nheight.
 Proof.
 move=> iLw sWf; apply/negP.
 have iLwb : i < nwB by apply: ltn_trans nwidthLwB.
-rewrite cell_get_column //.
-have /existsP[/= k /andP[kLh /forallP/(_ height)]/eqP->] : 
+rewrite cell_get_column //; last by rewrite nhorizontalE.
+have /existsP[/= k /andP[kLh /forallP/(_ height)]/eqP] : 
     opzs height (get_column s (of_nat i)).
   by apply: valid_pegs_opzs => //; apply/nltbP; rewrite of_natK.
+rewrite to_natK => ->.
 case: nltbP => //.
 by case: nlebP kLh => //; rewrite ltnNge => ->.
 Qed.
@@ -770,17 +848,23 @@ move=> jLh sWf; apply/negP.
 have jLw : j < nwB by rewrite (leq_trans jLh) // ltnW // nhorizontalLwB.
 rewrite /cell => Hcc.
 have : to_nat (width * horizontal + of_nat j) %/ nhorizontal < nwidth.
-  by apply: valid_pegs_true_width sWf _.
+  apply: valid_pegs_true_width sWf _.
+  by rewrite to_natK in Hcc.
 suff -> : to_nat (width * horizontal + of_nat j) %/ nhorizontal = nwidth.
-  by [].
-rewrite to_nat_add ?of_natK //.
-  rewrite to_nat_mul; last by apply: whLw.
-  by rewrite divnMDl // divn_small.
-rewrite to_nat_mul; last by apply: whLw.
-apply: leq_trans (_ : to_nat width * to_nat horizontal + nhorizontal <= _).
-  by rewrite ltn_add2l.
-apply: leq_trans (_ : 2 ^ 8 <= _); first by [].
-by rewrite nwB_pow leq_exp2l.
+  by rewrite ltnn.
+have -> : to_nat (width * horizontal + of_nat j) = 
+   (nwidth * nhorizontal + j)%N.
+  rewrite to_nat_add to_nat_wh of_natK //.
+  apply: ltn_trans (_ : nwidth.+1 * nhorizontal < nwB).
+    by rewrite mulSn addnC ltn_add2r.
+  apply: leq_ltn_trans (_ : ndigits * nhorizontal < nwB).
+    by rewrite leq_mul2r // nwidthLd orbT.
+  apply: ltn_trans (_ : ndigits * ndigits < nwB).
+    by rewrite ltn_mul2l nhorizontalLd.
+  apply: ltn_trans (_: 2 ^ 12 < _); first by [].
+  by rewrite nwB_pow ltn_exp2l.
+rewrite divnMDl; last by rewrite nhorizontalE.
+by rewrite divn_small // addn0.
 Qed.
 
 Lemma of_nat_int_add_mod i j : 
@@ -789,7 +873,7 @@ Proof.
 rewrite [LHS](int_add_mod i j); congr (_ * _ + _); apply: to_nat_inj.
   rewrite of_natK; first by rewrite to_nat_div.
   by apply: leq_ltn_trans (leq_div _ _) (to_nat_bounded _).
-  rewrite of_natK; first by rewrite to_nat_mod.
+rewrite of_natK; first by rewrite to_nat_mod.
 by apply: leq_ltn_trans (leq_mod _ _) (to_nat_bounded _).
 Qed.
 
@@ -797,13 +881,15 @@ Lemma bit_cell s i :
   bit s i = cell s (to_nat i %/ nhorizontal) (to_nat i %% nhorizontal).
 Proof. by rewrite [in LHS](of_nat_int_add_mod i horizontal). Qed.
 
+Lemma up_leftE : up_left = height.
+Proof. by apply: to_nat_inj; rewrite to_nat_up_left nhorizontalE. Qed.
 
 Lemma is_won_cwin w b : valid_pegs (w lor b) -> is_won w = cwin w.
 Proof.
 move=> Hw.
 have fLwB : 4 < nwB by rewrite nwB_pow (@ltn_exp2l 2 2).
-have wLwB  : nwidth < nwB by rewrite nwB_pow  (leq_trans _ (_ : 2 ^ 3 <= _)).
-have hLwB  : nheight < nwB by rewrite nwB_pow  (leq_trans _ (_ : 2 ^ 3 <= _)).
+have wLwB  : nwidth < nwB by apply: nwidthLwB.
+have hLwB  : nheight < nwB by apply: nheightLwB.
 have Hv k l m : k * horizontal + l + m * horizontal = (k + m) * horizontal + l.
   rewrite -add_assoc add_comm -add_assoc add_comm; congr (_ + _).
   by rewrite -mul_add_distr_r add_comm.
@@ -825,9 +911,10 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     exists (Ordinal vB) => /=.
     pose r := x mod horizontal.
     have rB : (to_nat r < nheight)%N.
-      have : to_nat r < nhorizontal by rewrite to_nat_mod ltn_mod.
-      rewrite leq_eqVlt => /orP[/eqP He|//].
-      have He1 : to_nat r = nheight by case: He.
+      have : to_nat r < nhorizontal.
+        by rewrite to_nat_mod ltn_mod [X in _ < X]nhorizontalE.
+      rewrite leq_eqVlt => /orP[/eqP He|]; last by rewrite nhorizontalE.
+      have He1 : to_nat r = nheight by rewrite nhorizontalE in He; case: He.
       have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).
         by rewrite He1 (cell_height _ Hw).
       by rewrite cell_lor /cell !to_natK // -int_add_mod // Hb1.
@@ -840,7 +927,9 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       have vkLb : to_nat v + k < nwB.
         apply: ltn_trans (_ : to_nat v + 4 < _); first by rewrite ltn_add2l.
         apply: ltn_trans (_ : nwidth + 4 < _); first by rewrite ltn_add2r.
-        apply: ltn_trans (_ : 2 ^8 < _); first by[].
+        apply: ltn_trans (_ : ndigits + 4 < _).
+          by rewrite ltn_add2r // nwidthLd.
+        apply: ltn_trans (_ : 2 ^ 8 < _); first by [].
         by rewrite nwB_pow ltn_exp2l.
       apply: to_nat_inj; rewrite of_natK //.
       by rewrite to_nat_add of_natK.
@@ -848,7 +937,7 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       have /negP[] : ~~ cell (w lor b) (to_nat v).+1 (to_nat r).
         rewrite He.
         apply: cell_width Hw => //.
-        by apply: leq_trans rB _.
+        by apply: leq_trans rB _; rewrite nhorizontalE.
       rewrite cell_lor /cell; apply/orP; left.
       rewrite !to_natK // -addn1 Fv //.
       rewrite mul_add_distr_r mul_1_l -add_assoc [_ + r]add_comm add_assoc.
@@ -857,7 +946,7 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       have /negP[] : ~~ cell (w lor b) (to_nat v).+2 (to_nat r).
         rewrite He.
         apply: cell_width Hw => //.
-        by apply: leq_trans rB _.
+        by apply: leq_trans rB _; rewrite nhorizontalE.
       rewrite cell_lor /cell; apply/orP; left.
       rewrite !to_natK // -addn2 Fv //.
       rewrite mul_add_distr_r -add_assoc [_ + r]add_comm add_assoc.
@@ -866,7 +955,7 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       have /negP[] : ~~ cell (w lor b) (to_nat v).+3 (to_nat r).
         rewrite He.
         apply: cell_width Hw => //.
-        by apply: leq_trans rB _.
+        by apply: leq_trans rB _; rewrite nhorizontalE.
       rewrite cell_lor /cell; apply/orP; left.
       rewrite !to_natK // -addn3 Fv //.
       rewrite mul_add_distr_r -add_assoc [_ + r]add_comm add_assoc.
@@ -874,7 +963,7 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     rewrite vB //=.
     rewrite /cell !to_natK.
     rewrite -addn3 Fv // -Hv -addn2 Fv // -Hv -addn1 Fv // -Hv.
-    by rewrite -int_add_mod Hb1 Hb2 Hb3 Hb4.
+    by rewrite -int_add_mod mul_1_l Hb1 Hb2 Hb3 Hb4.
   - apply: Or42; apply/existsP=> /=.
     pose v := x / horizontal.
     have vB : (to_nat v < nwidth)%N.
@@ -882,13 +971,13 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     exists (Ordinal vB) => /=.
     pose r := x mod horizontal.
     have rB : (to_nat r < nheight)%N.
-      have : to_nat r < nhorizontal by rewrite to_nat_mod ltn_mod.
-      rewrite leq_eqVlt => /orP[/eqP He|//].
-      have He1 : to_nat r = nheight by case: He.
+      have : to_nat r < nhorizontal. 
+        by rewrite to_nat_mod ltn_mod ?[X in _ < X]nhorizontalE.
+      rewrite nhorizontalE ltnS leq_eqVlt => /orP[/eqP He|//].
       have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).
-        by rewrite He1 (cell_height _ Hw).
-      rewrite cell_lor /cell; apply/orP; left;
-      by rewrite !to_natK // -int_add_mod.
+        by rewrite He (cell_height _ Hw).
+      by rewrite cell_lor /cell; apply/orP; left;
+         rewrite !to_natK // -int_add_mod.
     apply/existsP; exists (Ordinal rB) => /=.
     have Fr k : k < 4 -> of_nat (to_nat r + k) = r + of_nat k.
       move=> kL4.
@@ -898,7 +987,9 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       have vkLb : to_nat r + k < nwB.
         apply: ltn_trans (_ : to_nat r + 4 < _); first by rewrite ltn_add2l.
         apply: ltn_trans (_ : nheight + 4 < _); first by rewrite ltn_add2r.
-        apply: ltn_trans (_ : 2 ^8 < _); first by[].
+        apply: ltn_trans (_ : ndigits + 4 < _).
+          by rewrite ltn_add2r // ltnW.
+        apply: ltn_trans (_ : 2 ^ 8 < _); first by [].
         by rewrite nwB_pow ltn_exp2l.
       apply: to_nat_inj; rewrite of_natK //.
       by rewrite to_nat_add of_natK.
@@ -929,11 +1020,11 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     exists (Ordinal vB) => /=.
     pose r := x mod horizontal.
     have rB : (to_nat r < nheight)%N.
-      have : to_nat r < nhorizontal by rewrite to_nat_mod ltn_mod.
-      rewrite leq_eqVlt => /orP[/eqP He|//].
-      have He1 : to_nat r = nheight by case: He.
+      have : to_nat r < nhorizontal. 
+        by rewrite to_nat_mod ltn_mod ?[X in _ < X]nhorizontalE.
+      rewrite nhorizontalE ltnS leq_eqVlt => /orP[/eqP He|//].
       have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).
-        by rewrite He1 (cell_height _ Hw).
+        by rewrite He (cell_height _ Hw).
       rewrite cell_lor /cell; apply/orP; left.
       by rewrite !to_natK // -int_add_mod.
     apply/existsP; exists (Ordinal rB) => /=.
@@ -945,7 +1036,9 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       have vkLb : to_nat v + k < nwB.
         apply: ltn_trans (_ : to_nat v + 4 < _); first by rewrite ltn_add2l.
         apply: ltn_trans (_ : nwidth + 4 < _); first by rewrite ltn_add2r.
-        apply: ltn_trans (_ : 2 ^8 < _); first by[].
+        apply: ltn_trans (_ : ndigits + 4 < _).
+          by rewrite ltn_add2r // nwidthLd.
+        apply: ltn_trans (_ : 2 ^ 8 < _); first by [].
         by rewrite nwB_pow ltn_exp2l.
       apply: to_nat_inj; rewrite of_natK //.
       by rewrite to_nat_add of_natK.
@@ -962,7 +1055,7 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
       have /negP[] : ~~ cell (w lor b) (to_nat v) nheight.
         by apply: cell_height Hw.
       rewrite cell_lor /cell; apply/orP; left; rewrite to_natK //.
-      suff -> : v * horizontal = x by [].
+      suff -> : v * horizontal = x by rewrite to_natK -up_leftE.
       rewrite (int_add_mod x horizontal) -/v -/r.
       suff -> : r = 0 by rewrite add_comm add_0_l.
       by apply: to_nat_inj.
@@ -971,7 +1064,7 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
         rewrite He.
         apply: cell_width Hw => //.
         rewrite prednK // ltnW //.
-        by apply: leq_trans rB _.
+        by apply: leq_trans rB _; rewrite nhorizontalE.
       rewrite cell_lor /cell; apply/orP; left.
       rewrite -addn1 -subn1 Fv // Fr //=.
       by rewrite -Hl mul_1_l -int_add_mod.
@@ -980,14 +1073,16 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
         by apply: cell_height Hw.
       rewrite cell_lor /cell; apply/orP; left.
       rewrite -addn1 Fv // mul_add_distr_r mul_1_l -add_assoc.
-      have -> : (horizontal + of_nat nheight) = 1 + 2 * up_left by [].
+      have -> : (horizontal + of_nat nheight) = 1 + 2 * up_left.
+        by rewrite to_natK up_leftE /horizontal -[2]/(1 + 1); ring.
       have <- : r = 1 by apply: to_nat_inj.
       by rewrite add_assoc -int_add_mod.
     move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
       have /negP[] : ~~ cell (w lor b) (to_nat v).+2 (to_nat r).-2.
         rewrite He.
         apply: cell_width Hw => //.
-        by rewrite -subn2 (leq_ltn_trans (leq_subr _ _)) // (leq_trans rB).
+        rewrite -subn2 (leq_ltn_trans (leq_subr _ _)) //.
+        by rewrite (leq_trans rB) // nhorizontalE.
       rewrite cell_lor /cell; apply/orP; left.
       rewrite -addn2 -subn2 Fv // Fr//=.
       by rewrite -Hl -int_add_mod.
@@ -996,14 +1091,17 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
         by apply: cell_height Hw.
       rewrite cell_lor /cell; apply/orP; left.
       rewrite -addn2 Fv // mul_add_distr_r -add_assoc.
-      have -> : (2 * horizontal + of_nat nheight) = 2 + 3 * up_left by [].
+      have -> : (2 * horizontal + of_nat nheight) = 2 + 3 * up_left.
+        rewrite up_leftE to_natK /horizontal -[2]/(1 + 1) -[3]/(1 + 1 + 1).
+        by ring.
       have <- : r = 2 by apply: to_nat_inj.
       by rewrite add_assoc -int_add_mod.
     move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
       have /negP[] : ~~ cell (w lor b) (to_nat v).+3 (to_nat r).-1.-2.
         rewrite He.
         apply: cell_width Hw => //.
-        by rewrite -subn3 (leq_ltn_trans (leq_subr _ _)) // (leq_trans rB).
+        rewrite -subn3 (leq_ltn_trans (leq_subr _ _)) // (leq_trans rB) //.
+        by rewrite nhorizontalE.
       rewrite cell_lor /cell; apply/orP; left.
       rewrite  -addn3 -subn3  Fv // Fr //=.
       by rewrite -Hl -int_add_mod.
@@ -1012,7 +1110,7 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     rewrite -addn3 -subn3 Fv // Fr // -Hl.
     rewrite -addn2 -subn2 Fv // Fr // 1?ltnW // -Hl.
     rewrite -addn1 -subn1 Fv // Fr // 2?ltnW // -Hl.
-    by rewrite -int_add_mod Hb1 Hb2 Hb3 Hb4.
+    by rewrite -int_add_mod mul_1_l Hb1 Hb2 Hb3 Hb4.
   apply: Or43; apply/existsP=> /=.
   pose v := x / horizontal.
   have vB : (to_nat v < nwidth)%N.
@@ -1020,11 +1118,11 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
   exists (Ordinal vB) => /=.
   pose r := x mod horizontal.
   have rB : (to_nat r < nheight)%N.
-    have : to_nat r < nhorizontal by rewrite to_nat_mod ltn_mod.
-    rewrite leq_eqVlt => /orP[/eqP He|//].
-    have He1 : to_nat r = nheight by case: He.
+    have : to_nat r < nhorizontal. 
+      by rewrite to_nat_mod ltn_mod ?[X in _ < X]nhorizontalE.
+    rewrite nhorizontalE ltnS leq_eqVlt => /orP[/eqP He|//].
     have /negP[] : ~~ cell (w lor b) (to_nat v) (to_nat r).
-      by rewrite He1 (cell_height _ Hw).
+      by rewrite He (cell_height _ Hw).
     by rewrite cell_lor /cell; apply/orP; left; rewrite !to_natK // -int_add_mod.
   apply/existsP; exists (Ordinal rB) => /=.
   have Fv k : k < 4 -> of_nat (to_nat v + k) = v + of_nat k.
@@ -1035,7 +1133,9 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     have vkLb : to_nat v + k < nwB.
       apply: ltn_trans (_ : to_nat v + 4 < _); first by rewrite ltn_add2l.
       apply: ltn_trans (_ : nwidth + 4 < _); first by rewrite ltn_add2r.
-      apply: ltn_trans (_ : 2 ^8 < _); first by[].
+      apply: ltn_trans (_ : ndigits + 4 < _).
+        by rewrite ltn_add2r // nwidthLd.
+      apply: ltn_trans (_ : 2 ^ 8 < _); first by [].
       by rewrite nwB_pow ltn_exp2l.
     apply: to_nat_inj; rewrite of_natK //.
     by rewrite to_nat_add of_natK.
@@ -1047,15 +1147,17 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     have vkLb : to_nat r + k < nwB.
       apply: ltn_trans (_ : to_nat r + 4 < _); first by rewrite ltn_add2l.
       apply: ltn_trans (_ : nheight + 4 < _); first by rewrite ltn_add2r.
-      apply: ltn_trans (_ : 2 ^8 < _); first by[].
+      apply: ltn_trans (_ : ndigits + 4 < _).
+        by rewrite ltn_add2r // ltnW.
+      apply: ltn_trans (_ : 2 ^ 8 < _); first by [].
       by rewrite nwB_pow ltn_exp2l.
     apply: to_nat_inj; rewrite of_natK //.
     by rewrite to_nat_add of_natK.
-  have rLw : to_nat r < nwB.
-    by apply: ltn_trans rB hLwB.
+  have rLw : to_nat r < nwB by apply: ltn_trans rB hLwB.
   move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
     have /negP[] : ~~ cell (w lor b) (to_nat v).+1 (to_nat r).+1.
-      by rewrite He; apply: cell_width Hw.
+      rewrite He; apply: cell_width Hw => //.
+      by rewrite nhorizontalE.
     rewrite cell_lor /cell; apply/orP; left.
     rewrite -addn1 Fv // -[(to_nat r).+1]addn1 Fr //=.
     by rewrite -Hr mul_1_l -int_add_mod.
@@ -1067,7 +1169,7 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     by rewrite -Hr mul_1_l -int_add_mod.
   move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
     have /negP[] : ~~ cell (w lor b) (to_nat v).+2 (to_nat r).+2.
-      by rewrite He; apply: cell_width Hw.
+      by rewrite He; apply: cell_width Hw; rewrite nhorizontalE.
     rewrite cell_lor /cell; apply/orP; left.
     rewrite -addn2 Fv // -[(to_nat r).+2]addn2 Fr //=.
     by rewrite -Hr -int_add_mod.
@@ -1079,7 +1181,7 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
     by rewrite -Hr -int_add_mod.
   move: vB; rewrite  leq_eqVlt => /orP[/eqP He |vB].
     have /negP[] : ~~ cell (w lor b) (to_nat v).+3 (to_nat r).+3.
-      by rewrite He; apply: cell_width Hw.
+      by rewrite He; apply: cell_width Hw; rewrite nhorizontalE.
     rewrite cell_lor /cell; apply/orP; left.
     rewrite -addn3 Fv // -[(to_nat r).+3]addn3 Fr //=.
     by rewrite -Hr -int_add_mod.
@@ -1094,13 +1196,14 @@ apply/existsP/or4P => /= [[x /existsP[/= dir /andP[]]]|].
   rewrite -addn3 -[(to_nat r).+3]addn3 Fv // Fr // -Hr.
   rewrite -addn2 -[(to_nat r).+2]addn2 Fv // Fr // -Hr.
   rewrite -addn1 -[(to_nat r).+1]addn1 Fv // Fr // -Hr.
-  by rewrite -int_add_mod Hb1 Hb2 Hb3 Hb4.
+  by rewrite -int_add_mod mul_1_l Hb1 Hb2 Hb3 Hb4.
 case => [] /existsP[/= x] /existsP[/= y] /and5P[].
 - move=> xLw; rewrite /cell => Hb1 Hb2 Hb3 Hb4.
   exists (of_nat x * horizontal + of_nat y).
   apply/existsP; exists horizontal; rewrite !inE eqxx !andTb.
   suff F k : k < 4 -> of_nat x * horizontal + of_nat y + of_nat k * horizontal = 
     of_nat (x + k) * horizontal + of_nat y.
+    rewrite -{3}[horizontal]mul_1_l.
     by rewrite (F 1%N)// addn1 (F 2%N)// addn2 (F 3%N)// addn3 Hb1 Hb2 Hb3 Hb4.
   move=> kL4.
   have kLnwB : k < nwB by apply: leq_trans kL4 _; rewrite ltnW.
@@ -1113,7 +1216,8 @@ case => [] /existsP[/= x] /existsP[/= y] /and5P[].
   by rewrite mul_add_distr_r -!add_assoc; congr (_ + _); rewrite add_comm.
 - move=> yLh; rewrite /cell => Hb1 Hb2 Hb3 Hb4.
   exists (of_nat x * horizontal + of_nat y).
-  apply/existsP; exists vertical; rewrite !inE eqxx !andTb.
+  apply/existsP; exists vertical.
+  rewrite !inE eqxx !orbT andTb.
   suff F k : k < 4 -> of_nat x * horizontal + of_nat y + of_nat k = 
     of_nat x * horizontal + of_nat (k + y).
     by rewrite (F 1%N) // (F 2%N) // (F 3%N) // Hb1 Hb2 Hb3 Hb4.
@@ -1127,9 +1231,10 @@ case => [] /existsP[/= x] /existsP[/= y] /and5P[].
   by apply: to_nat_inj; rewrite to_nat_add !of_natK // addnC.
 - move=> xLw yLh; rewrite /cell => Hb1 Hb2 /andP[Hb3 Hb4].
   exists (of_nat x * horizontal + of_nat y).
-  apply/existsP; exists up_right; rewrite !inE eqxx !andTb.
+  apply/existsP; exists up_right; rewrite !inE eqxx !orbT !andTb.
   suff F k : k < 4 -> of_nat x * horizontal + of_nat y + of_nat k * up_right = 
     of_nat (k + x) * horizontal + of_nat (k + y).
+    rewrite -{1}[up_right]mul_1_l.
     by rewrite (F 1%N) // (F 2%N) // (F 3%N) // Hb1 Hb2 Hb3 Hb4.
   move=> kL4.
   have kLnwB : k < nwB by apply: leq_trans kL4 _; rewrite ltnW.
@@ -1151,9 +1256,10 @@ case => [] /existsP[/= x] /existsP[/= y] /and5P[].
   by rewrite mul_add_distr_l [_ * 1]mul_comm mul_1_l.
 move=> xLw yG2; rewrite /cell => Hb1 Hb2 /andP[Hb3 Hb4].
 exists (of_nat x * horizontal + of_nat y).
-apply/existsP; exists up_left; rewrite !inE eqxx !andTb.
+apply/existsP; exists up_left; rewrite !inE eqxx !orbT !andTb.
 suff F k : k < 4 -> of_nat x * horizontal + of_nat y + of_nat k * up_left = 
   of_nat (k + x) * horizontal + of_nat (y - k).
+  rewrite -{1}[up_left]mul_1_l.
   rewrite (F 1%N) // subn1 (F 2%N) // subn2 (F 3%N) // subnS subn2.
   by rewrite Hb1 Hb2 Hb3 Hb4.
 move=> kL4.
@@ -1167,13 +1273,12 @@ have ykLnwB : y - k < nwB by apply: leq_trans yLnwB; rewrite ltnS leq_subr.
 have -> :  of_nat (k + x) = of_nat k + of_nat x.
   by apply: to_nat_inj; rewrite to_nat_add !of_natK // addnC.
 rewrite [of_nat k + _]add_comm mul_add_distr_r -!add_assoc; congr (_ + _).
-have -> : horizontal = up_left + 1 by [].
+have -> : horizontal = up_left + 1 by rewrite up_leftE.
 rewrite mul_add_distr_l [_ * 1]mul_comm mul_1_l.
 rewrite add_comm -add_assoc; congr (_ + _).
 have kLy : k <= y by rewrite  -ltnS (leq_trans kL4).
 by apply: to_nat_inj; rewrite to_nat_add !of_natK // addnC subnK.
 Qed.
-
 
 Lemma in_insert_fmove m1 m2 v1 v2 l : 
   (m1, v1) \in (insert_fmove m2 v2 l) = 
@@ -1199,37 +1304,28 @@ case E : (_ ?= _); rewrite /= ?inE.
 by rewrite (negPf mDm1) /= mNIl m1NIl.
 Qed.
 
-Lemma nheightLwB : nheight < nwB.
-Proof.
-apply: ltn_trans (_ : 2 ^ 6 < _); first by [].
-by rewrite nwB_pow ltn_exp2l.
-Qed.
-
 Lemma get_columnE s x :
   x < nwidth ->
   to_nat (get_column s (of_nat x)) = \sum_(i < nhorizontal)  cell s x i * 2 ^ i.
 Proof.
 move=> xLw.
 rewrite to_nat_sum.
-have hLd : nhorizontal <= ndigits by [].
-rewrite (big_ord_widen _ 
-          (fun i => cell s x i * 2 ^ i)%N (isT: nhorizontal <= ndigits)).
+have hLd : nhorizontal <= ndigits by rewrite nhorizontalE ltnW.
+rewrite (big_ord_widen _ (fun i => cell s x i * 2 ^ i)%N hLd).
 rewrite [RHS]big_mkcond.
 apply: eq_bigr => /= i _.
 case: nltbP (@bit_get_column0 s (of_nat x) (of_nat i));
     (rewrite of_natK; last by apply: leq_trans (ltn_ord i) (ltnW ndigitsLwB)).
-  by move=> H /(_ isT) ->; rewrite ifN // -leqNgt.
+  by move=> H /(_ isT) ->; rewrite ifN // -leqNgt nhorizontalE.
 move/negP; rewrite -leqNgt -ltnS.
 rewrite ltnS -[to_nat height]/nheight => iLh _.
-by rewrite ifT // -cell_get_column.
+rewrite ifT; last by rewrite nhorizontalE.
+by rewrite -cell_get_column // nhorizontalE.
 Qed.
-
-
-Notation size := seq.size.
 
 Lemma columns_size : size columns = nwidth.
 Proof.
-have -> : columns = make_columns nwidth first_column by [].
+have -> : columns = make_columns height nwidth first_column by [].
 by elim: nwidth first_column => //= ? IH c; rewrite IH.
 Qed.
 
@@ -1237,11 +1333,12 @@ Lemma columns_val i :
   i < nwidth -> nth 0 columns i = lsl first_column (of_nat i * horizontal).
 Proof.
 move=> iLw.
-have: i * nhorizontal < nwB by apply: ltn_trans whLw; rewrite ltn_mul2r.
-have -> : columns = make_columns nwidth first_column by [].
+have: i * nhorizontal < nwB.
+  by apply: ltn_trans whLwB; rewrite ltn_mul2r nhorizontalE.
+have -> : columns = make_columns height nwidth first_column by [].
 move: iLw.
 elim: {-2}nwidth (leqnn nwidth) i first_column  => //= w IH HL [|i] f.
-  by rewrite lsl0_r.
+  by rewrite mul_0_l lsl0_r.
 rewrite ltnS => iLw i1hLwb; rewrite [LHS]/= IH //; last 2 first.
 - by rewrite ltnW.
 - by rewrite (leq_ltn_trans _ i1hLwb) // leq_mul2r leqnSn orbT.
@@ -1253,7 +1350,8 @@ rewrite -lsl_add_distl.
     by rewrite add1n (leq_ltn_trans _ nwidthLwB) // (ltn_trans _ HL).
   by rewrite mul_add_distr_r mul_1_l.
 rewrite to_nat_mul; last first.
-  by rewrite of_natK // (ltn_trans _ i1hLwb) // ltn_mul2r ltnS leqnn.
+  rewrite of_natK // (ltn_trans _ i1hLwb) // ltn_mul2r ltnS leqnn //.
+  by rewrite [X in _ < X]nhorizontalE.
 by rewrite addnC -mulSn of_natK.
 Qed.
 
@@ -1269,24 +1367,26 @@ pose f i := (to_nat (up_log2 (get_column s (of_nat i))) + i * nhorizontal)%N.
 rewrite (sum_pow_incr_div_mod f) // {}/f => [|j k /andP[jLk kLw]]; last first.
   have jLw : j < nwidth by apply: ltn_trans kLw.
   have := valid_pegs_opzs jLw wVp.
-  rewrite opzsE' //; case: nlebP => // uLh _.
+  rewrite opzsE' //; last by apply/nltbP/ltnW.
+   case: nlebP => // uLh _.
   apply: leq_trans (_ : j.+1 * nhorizontal <= _).
-    by rewrite mulSn ltn_add2r.
+    by rewrite mulSn ltn_add2r nhorizontalE.
   apply: leq_trans (_ : k * nhorizontal <= _); last by apply: leq_addl.
   by rewrite leq_mul2r jLk orbT.
 rewrite modn_small; last by case: (_ \in _).
 rewrite to_nat_add //; last first.
   rewrite to_nat_mul; last first.
     rewrite of_natK; last by apply: ltn_trans nwidthLwB.
-    by apply: leq_trans (ltnW whLw); rewrite ltn_mul2r.
+    apply: leq_trans (ltnW whLwB); rewrite ltn_mul2r //.
+    by rewrite [X in _ < X]nhorizontalE.
   rewrite of_natK; last by apply: ltn_trans nwidthLwB.
   rewrite of_natK; last by apply: ltn_trans nhorizontalLwB.
   apply: leq_trans (_ : x.+1 * nhorizontal <= _).
     by rewrite mulSn addnC ltn_add2r.
-  by apply: leq_trans (ltnW whLw); rewrite leq_mul2r.
+  by apply: leq_trans (ltnW whLwB); rewrite leq_mul2r nhorizontalE.
 rewrite to_nat_mul; last first.
   rewrite of_natK; last by apply: ltn_trans nwidthLwB.
-  by apply: leq_trans (ltnW whLw); rewrite ltn_mul2r.
+  by apply: leq_trans (ltnW whLwB); rewrite ltn_mul2r [X in _ < X]nhorizontalE.
 rewrite bool1E; apply/mapP/eqP => [[x1]|->]; last first.
   exists x; first by rewrite mem_iota.
   rewrite of_natK; last by apply: ltn_trans nwidthLwB.
@@ -1303,10 +1403,12 @@ have [xLx1|x1Lx|xEx1] := ltngtP x x1; last first.
   apply: leq_trans (_ : x1.+1 * to_nat horizontal <= _).
     rewrite mulSn ltn_add2r.
     have := valid_pegs_opzs x1Lw wVp.
-    rewrite opzsE' //; case: nlebP => // uLh _.
-    apply: leq_trans (_ : x * nhorizontal <= _).
-      by rewrite leq_mul2r.
-    by apply: leq_addl.
+    rewrite opzsE' //; last by apply/nltbP/ltnW.
+    case: nlebP => // uLh _.
+    by rewrite [X in _ < X]nhorizontalE.
+  apply: leq_trans (_ : x * nhorizontal <= _).
+    by rewrite leq_mul2r // [X in X == _]nhorizontalE.
+   by apply: leq_addl.
 suff : (z + x * to_nat horizontal < 
         to_nat (up_log2 (get_column s (of_nat x1))) + x1 * nhorizontal)%N.
   by rewrite -H ltnn.
@@ -1316,13 +1418,6 @@ apply: leq_trans (_ : x1 * to_nat horizontal <= _).
   by rewrite leq_mul2r xLx1 orbT.
 by apply: leq_addl.
 Qed.
-
-
-Notation "t .[ i ]" := (get t i)
-  (at level 1, left associativity, format "t .[ i ]").
-Notation "t .[ i <- a ]" := (set t i a)
-  (at level 1, left associativity, format "t .[ i <- a ]").
-
 
 Lemma fmsE wstate bstate border columns res :
 fms wstate bstate border columns res =
@@ -1340,9 +1435,7 @@ fms wstate bstate border columns res =
         let v := (values.[log2 move]) in
         fms wstate bstate border columns (insert_fmove move v res)
    end.
-Proof.
-by case: columns.
-Qed.
+Proof. by case: columns. Qed.
 
 (* Number of free cells *)
 Definition ncells s := \sum_(i < nwidth) \sum_(j < nheight) (~~ cell s i j).
@@ -1435,19 +1528,23 @@ move=> iLw jLh.
 have iLwB : i < nwB by apply: ltn_trans nwidthLwB.
 have jLwB : j < nwB by apply: ltn_trans nhorizontalLwB.
 have ihLwB : i * nhorizontal < nwB.
-  by rewrite (leq_ltn_trans _ whLw) // leq_mul2r ltnW.
+  by rewrite (leq_ltn_trans _ whLwB) // leq_mul2r ltnW // nhorizontalE.
 have ijLwB : i * nhorizontal + j < nwB.
-  rewrite (leq_ltn_trans _ whLw) //.
-  rewrite -(@prednK nwidth) // mulSn addnC.
-  by rewrite leq_add ?(leq_trans (ltnW jLh)) // leq_mul2r.
+  rewrite (leq_ltn_trans _ whLwB) //.
+  apply: leq_trans (_ : i.+1 * nhorizontal <= _).
+    by rewrite mulSn addnC leq_add2r ltnW.
+  by rewrite leq_mul2r  nhorizontalE.
 have HE : to_nat (of_nat i * horizontal + of_nat j) = (i * nhorizontal + j)%N.
-  rewrite to_nat_add //; last by rewrite to_nat_mul ?of_natK.
-  by rewrite of_natK // to_nat_mul ?of_natK.
+  rewrite to_nat_add //; last first.
+    by rewrite to_nat_mul of_natK // [X in _ + X < _]of_natK.
+  by rewrite to_nat_mul of_natK // [X in (_ + X)%N = _]of_natK.
 suff HL : of_nat i * horizontal + of_nat j <? digits.
   by rewrite cell_lor /cell bit_onenn ?eqxx ?orbT.
 apply/nltbP/(leq_ltn_trans _ (_ : nwidth * nhorizontal < _)) => //.
-rewrite HE -(@prednK nwidth) // mulSn addnC.
-by rewrite leq_add ?(leq_trans (ltnW jLh)) // leq_mul2r.
+rewrite HE.
+apply: leq_trans (_ : i.+1 * nhorizontal <= _).
+  by rewrite mulSn addnC leq_add2r ltnW.
+by rewrite leq_mul2r  nhorizontalE.
 Qed.
 
 Lemma cell_mk_mover s i1 i2 j1 j2 : 
@@ -1459,35 +1556,43 @@ move=> i1Lw j1Lh i2Lw j2Lh i1Di2Oj1Dj2.
 have i1LwB : i1 < nwB by apply: ltn_trans nwidthLwB.
 have j1LwB : j1 < nwB by apply: ltn_trans nhorizontalLwB.
 have i1hLwB : i1 * nhorizontal < nwB.
-  by rewrite (leq_ltn_trans _ whLw) // leq_mul2r ltnW.
+  by rewrite (leq_ltn_trans _ whLwB) // leq_mul2r ltnW // nhorizontalE.
 have i1j1LwB : i1 * nhorizontal + j1 < nwB.
-  rewrite (leq_ltn_trans _ whLw) //.
-  rewrite -(@prednK nwidth) // mulSn addnC.
-  by rewrite leq_add ?(leq_trans (ltnW j1Lh)) // leq_mul2r.
+  rewrite (leq_ltn_trans _ whLwB) //.
+  apply: leq_trans (_ : i1.+1 * nhorizontal <= _).
+    by rewrite mulSn addnC leq_add2r ltnW.
+  by rewrite leq_mul2r  nhorizontalE.
 have HE1 : to_nat (of_nat i1 * horizontal + of_nat j1) = 
                   (i1 * nhorizontal + j1)%N.
-  rewrite to_nat_add //; last by rewrite to_nat_mul ?of_natK.
-  by rewrite of_natK // to_nat_mul ?of_natK.
+  rewrite to_nat_add //; last first.
+    by rewrite to_nat_mul of_natK // [X in _ + X < _]of_natK.
+  by rewrite to_nat_mul of_natK // [X in (_ + X)%N = _]of_natK.
 have HL1 : of_nat i1 * horizontal + of_nat j1 <? digits.
   apply/nltbP/(leq_ltn_trans _ (_ : nwidth * nhorizontal < _)) => //.
-  rewrite HE1 -(@prednK nwidth) // mulSn addnC.
-  by rewrite leq_add ?(leq_trans (ltnW j1Lh)) // leq_mul2r.
+  rewrite HE1.
+  apply: leq_trans (_ : i1.+1 * nhorizontal <= _).
+    by rewrite mulSn addnC leq_add2r ltnW.
+  by rewrite leq_mul2r  nhorizontalE.
 have i2LwB : i2 < nwB by apply: ltn_trans nwidthLwB.
 have j2LwB : j2 < nwB by apply: ltn_trans nhorizontalLwB.
 have i2hLwB : i2 * nhorizontal < nwB.
-  by rewrite (leq_ltn_trans _ whLw) // leq_mul2r ltnW.
+  by rewrite (leq_ltn_trans _ whLwB) // leq_mul2r ltnW // nhorizontalE.
 have i2j2LwB : i2 * nhorizontal + j2 < nwB.
-  rewrite (leq_ltn_trans _ whLw) //.
-  rewrite -(@prednK nwidth) // mulSn addnC.
-  by rewrite leq_add ?(leq_trans (ltnW j2Lh)) // leq_mul2r.
+  rewrite (leq_ltn_trans _ whLwB) //.
+  apply: leq_trans (_ : i2.+1 * nhorizontal <= _).
+    by rewrite mulSn addnC leq_add2r ltnW.
+  by rewrite leq_mul2r  nhorizontalE.
 have HE2 : to_nat (of_nat i2 * horizontal + of_nat j2) =
              (i2 * nhorizontal + j2)%N.
-  rewrite to_nat_add //; last by rewrite to_nat_mul ?of_natK.
-  by rewrite of_natK // to_nat_mul ?of_natK.
+  rewrite to_nat_add //; last first.
+    by rewrite to_nat_mul of_natK // [X in _ + X < _]of_natK.
+  by rewrite to_nat_mul of_natK // [X in (_ + X)%N = _]of_natK.
 have HL2 : of_nat i2 * horizontal + of_nat j2 <? digits.
   apply/nltbP/(leq_ltn_trans _ (_ : nwidth * nhorizontal < _)) => //.
-  rewrite HE2 -(@prednK nwidth) // mulSn addnC.
-  by rewrite leq_add ?(leq_trans (ltnW j2Lh)) // leq_mul2r.
+  rewrite HE2.
+  apply: leq_trans (_ : i2.+1 * nhorizontal <= _).
+    by rewrite mulSn addnC leq_add2r ltnW.
+  by rewrite leq_mul2r  nhorizontalE.
 rewrite /make_move cell_lor /cell bit_onenn ?eqxx ?orbT //.
 suff /negPf-> : of_nat i1 * horizontal + of_nat j1 !=
                 of_nat i2 * horizontal + of_nat j2 by rewrite orbF.
@@ -1499,12 +1604,12 @@ have [i1Li2|i2Li1|//] := ltngtP i1 i2.
   apply: leq_trans (leq_addr _ _).
   apply: leq_trans (_ : i1.+1 * nhorizontal <= _).
     by rewrite mulSn addnC ltn_add2r.
-  by rewrite leq_mul2r.
+  by rewrite leq_mul2r // nhorizontalE.
 suff : i2 * nhorizontal + j2 < i1 * nhorizontal + j1 by rewrite i1j1Di2j2 ltnn.
 apply: leq_trans (leq_addr _ _).
 apply: leq_trans (_ : i2.+1 * nhorizontal <= _).
   by rewrite mulSn addnC ltn_add2r j2Lh.
-by rewrite leq_mul2r.
+by rewrite leq_mul2r // nhorizontalE.
 Qed.
 
 Definition transpose s1 s2 := 
@@ -1542,7 +1647,7 @@ pose f i := \sum_(j < nheight)  ~~ cell s1 i j.
 have <- := big_mkord xpredT f.
 rewrite big_nat_rev /= big_mkord /= add0n.
 apply: eq_bigr => i _; apply: eq_bigr => j _; rewrite Ht //.
-by apply: ltn_trans (ltn_ord j) _.
+by apply: ltn_trans (ltn_ord j) _; rewrite nhorizontalE.
 Qed.
 
 Lemma cwin_transpose s1 s2 : transpose s1 s2 -> cwin s1 = cwin s2.
@@ -1551,9 +1656,10 @@ have Hhi s3 s4 : transpose s3 s4 -> hwin s3 -> hwin s4.
   move=> /transposeP Ht.
   move=> /existsP[/= i /existsP[/= j /and5P[Hc1 Hc2 Hc3 Hc4 Hc5]]].
   apply/existsP; exists (rev_ord (Ordinal Hc1)); apply/existsP; exists j => /=.
-  have jLh' : j < nhorizontal by apply: ltn_trans (ltn_ord j) _.
+  have jLh' : j < nhorizontal by apply: ltn_trans (ltn_ord j) _; rewrite nhorizontalE.
   apply/and5P; split => //.
-  - by rewrite -!subSn // ?subSS ?leq_subr // (leq_trans Hc1).
+  - rewrite -!subSn // ?subSS ?leq_subr // (leq_trans Hc1) // ltnW //.
+    by rewrite ltnS ltnW.
   - by rewrite -Ht.
   - rewrite subnS prednK; last by rewrite subn_gt0.
     by rewrite -Ht // (leq_trans _ Hc1).
@@ -1571,7 +1677,8 @@ have Hh s3 s4 : transpose s3 s4 -> hwin s3 = hwin s4.
 have Hvi s3 s4 : transpose s3 s4 -> vwin s3 -> vwin s4.
   move=> /transposeP Ht.
   move=> /existsP[/= i /existsP[/= j /and5P[Hc1 Hc2 Hc3 Hc4 Hc5]]].
-  have j3Lh' : j.+3 < nhorizontal by apply: leq_trans Hc1 _.
+  have j3Lh' : j.+3 < nhorizontal.
+    by apply: leq_trans Hc1 _; rewrite nhorizontalE.
   apply/existsP; exists (rev_ord i); apply/existsP; exists j => /=.
   apply/and5P; split; rewrite -1?Ht //.
   - by rewrite ltnW // ltnW // ltnW.
@@ -1584,9 +1691,9 @@ have Hudi s3 s4 : transpose s3 s4 -> uwin s3 -> dwin s4.
   move=> /existsP[/= i /existsP[/= j /and5P[Hc1 Hc2 Hc3 Hc4 /andP[Hc5 Hc6]]]].
   apply/existsP; exists (rev_ord (Ordinal Hc1)).
   apply/existsP; exists (Ordinal Hc2) => /=.
-  have j3Lh' : j.+3 < nhorizontal by apply: leq_trans Hc2 _.
+  have j3Lh' : j.+3 < nhorizontal by apply: leq_trans Hc2 _; rewrite nhorizontalE.
   apply/and5P; split => //.
-  - by rewrite -!subSn // ?subSS ?leq_subr // (leq_trans Hc1).
+  - by rewrite -!subSn // ?subSS ?leq_subr // (leq_trans Hc1) // ltnW // ltnW.
   - by rewrite -Ht.
   - rewrite subnS prednK; last by rewrite subn_gt0.
     by rewrite -Ht // ltnW.
@@ -1610,14 +1717,18 @@ have Hdui s3 s4 : transpose s3 s4 -> dwin s3 -> uwin s4.
   have j1_gt0 : 0 < j.-1 by rewrite -subn1 subn_gt0 (leq_trans _ Hc2).
   have j2_gt0 : 0 < j.-2 by rewrite -subn2 subn_gt0 (leq_trans _ Hc2).
     apply/existsP; exists (Ordinal j3Lh) => /=.
-  have jLh' : j < nhorizontal by apply: leq_trans (ltn_ord j).
+  have jLh' : j < nhorizontal.
+    by apply: leq_trans (ltn_ord j) _; rewrite nhorizontalE.
   apply/and5P; split; [idtac|idtac|idtac|idtac|apply/andP; split] => //.
-  - by rewrite -!subSn // ?subSS ?leq_subr // (leq_trans Hc1).
+  - by rewrite -!subSn // ?subSS ?leq_subr // (leq_trans Hc1) // ltnW // ltnW.
   - by rewrite !prednK.
-  - by rewrite -Ht // (leq_trans j3Lh).
+  - by rewrite -Ht // (leq_trans j3Lh) // nhorizontalE.
   - rewrite subnS prednK; last by rewrite subn_gt0.
     rewrite -Ht //; first by rewrite prednK.
-    by apply: leq_trans Hc1.
+      by apply: leq_trans Hc1.
+    apply: leq_ltn_trans jLh'.
+    rewrite -subn2 (leq_ltn_trans (leq_subr _ _)) //.
+    by rewrite -[X in _ < X]prednK.
   - rewrite 2!subnS !prednK //; last 2 first.
     - by rewrite subn_gt0 (leq_trans _ Hc1).
     - by rewrite -subnS subn_gt0.
@@ -1639,7 +1750,7 @@ Lemma mk_move_transpose s1 s2 i j :
    transpose (mk_move s1 i j) (mk_move s2 (nwidth - i.+1) j).
 Proof.
 move=> /transposeP Ht iLw jLh.
-have jLh' : j < nhorizontal by apply: leq_trans jLh _.
+have jLh' : j < nhorizontal by apply: leq_trans jLh _; rewrite nhorizontalE.
 apply/transposeP => i1 j1 i1Lw j1Lh.
 have /= niLw := (ltn_ord (rev_ord (Ordinal iLw))).
 have /= ni1Lw := (ltn_ord (rev_ord (Ordinal i1Lw))).
@@ -1649,7 +1760,6 @@ have [<-|/eqP iDi1] := (i =P i1); last first.
   by rewrite !cell_mk_mover -?Ht ?iDi1 // eqn_sub2lE // eqSS iDi1.
 by rewrite !cell_mk_movel.
 Qed.
-
 
 Lemma valid_pegs_get_border_width w b j : 
   valid_pegs (w lor b) -> bit (get_border w b) j -> 
@@ -1663,23 +1773,26 @@ pose f i := (to_nat (up_log2 (get_column (w lor b) (of_nat i)))
 rewrite (sum_pow_incr_div _ _ f) // => [|j1 k1 /andP[j1Lk1 k1Lw]]; last first.
   have j1Lw : j1 < nwidth by apply: ltn_trans k1Lw.
   have := valid_pegs_opzs j1Lw wVp.
-  rewrite opzsE' //; case: nlebP => // uLh _.
+  rewrite opzsE' //; last by apply/nltbP/ltnW.
+  case: nlebP => // uLh _.
   apply: leq_trans (_ : j1.+1 * nhorizontal <= _).
-    by rewrite mulSn ltn_add2r.
+    by rewrite mulSn ltn_add2r nhorizontalE.
   apply: leq_trans (_ : k1 * nhorizontal <= _); last by apply: leq_addl.
   by rewrite leq_mul2r j1Lk1 orbT.
 rewrite big1 //= => i _; rewrite /f.
 rewrite divn_small // ltn_exp2l //.
 have := valid_pegs_opzs (ltn_ord i) wVp.
-rewrite opzsE' //; case: nlebP => // uLh _.
+rewrite opzsE' //; last by apply/nltbP/ltnW.
+case: nlebP => // uLh _.
 apply: leq_trans (_ : to_nat j %/ nhorizontal * nhorizontal <= _); last first.
   by rewrite [X in _ <=  X](divn_eq (to_nat j) nhorizontal) leq_addr.
-apply: leq_trans (_ : nwidth * nhorizontal <= _); last by rewrite leq_mul2r.
+apply: leq_trans (_ : nwidth * nhorizontal <= _); last first.
+  by rewrite leq_mul2r wLjh orbT.
 apply: leq_ltn_trans (_ :   to_nat height + i * nhorizontal < _).
   by rewrite leq_add2r.
 apply: leq_trans (_ :  i.+1 * nhorizontal <= _).
-  by rewrite mulSn ltn_add2r.
-by rewrite leq_mul2r ltn_ord.
+  by rewrite mulSn ltn_add2r nhorizontalE.
+by rewrite leq_mul2r ltn_ord // nhorizontalE.
 Qed.
 
 Lemma get_borderC w b : get_border w b = get_border b w.
@@ -1692,8 +1805,9 @@ Proof.
 move=> y sWf xLw zLh.
 rewrite cell_get_column //.
 have := valid_pegs_opzs xLw sWf.
-rewrite opzsE' => [/andP[/nlebP uLh /eqP->]|]; last by case: nltbP.
-rewrite bit_decr; last by apply/nltbP/(leq_trans uLh).
+rewrite opzsE'; last by apply/nltbP/ltnW.
+move => /andP[/nlebP uLh /eqP->].
+rewrite bit_decr; last by apply/nltbP/(leq_ltn_trans uLh)/ltnW.
 case: nltbP => //.
 by rewrite -/y of_natK // (ltn_trans _ nhorizontalLwB).
 Qed.
@@ -1731,7 +1845,7 @@ move: kihLh; rewrite to_nat_sub //.
 have ihE : to_nat (of_nat i * horizontal) = (i * nhorizontal)%N by apply: ihE.
 rewrite ihE in kLih; rewrite ihE ltn_subLR //.
 move=> kihLh; apply/sym_equal/divn_inv.
-by rewrite kLih (leq_trans kihLh) // mulSn addnC leq_add2r.
+by rewrite kLih (leq_trans kihLh) // mulSn addnC leq_add2r // nhorizontalE.
 Qed.
 
 Lemma bit_lsl_first_column_mod_lt i k : 
@@ -1831,3 +1945,5 @@ apply: eq_bigr => /= k _; congr (_ * _)%N.
 suff/transposeP : transpose (w1 lor b1) (w2 lor b2) by move=> ->.
 by apply: transpose_lor.
 Qed.
+
+End Basic.

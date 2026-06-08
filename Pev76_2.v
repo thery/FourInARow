@@ -10,6 +10,8 @@ Require Import Pmoves.
 Require Import Phash.
 Require Import Palphabeta.
 Require Import FourInARow.
+Require Import FourInARow76.
+Require Import Eval76.
 
 (******************************************************************************)
 (*                                                                            *)
@@ -34,18 +36,21 @@ Definition ev2 := (
               ++ "_______"
               ++ "_O_X___")%string.
 
-Definition ew2 :=  (get_position ev2).1.
-Definition eb2 :=  (get_position ev2).2.
+Definition ew2 :=  (get_position 7 6 ev2).1.
+Definition eb2 :=  (get_position 7 6 ev2).2.
 
-Lemma eval_ev2E : top_eval ew2 eb2 = win.
+Lemma eval_ev2E : top_eval76 ew2 eb2 = win.
 Proof.
 native_cast_no_check (refl_equal win).
 Time Qed.
+(*
+Admitted.
+*)
 
-Lemma eval_ev2 : eval ew2 eb2 = WIN.
+Lemma eval_ev2 : eval 7 6 ew2 eb2 = WIN.
 Proof.
-suff : valid_eval ew2 eb2 win.
-  by rewrite /valid_eval; case/or3P: (evalOr ew2 eb2) => /eqP->.
+suff : valid_eval 7 6 ew2 eb2 win.
+  by rewrite /valid_eval; case/or3P: (@evalOr 7 6 isT isT ew2 eb2) => /eqP->.
 rewrite -eval_ev2E.
-by apply: topeval_correct.
+by apply: topeval76_correct.
 Qed.

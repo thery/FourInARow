@@ -33,6 +33,55 @@ Open Scope uint63_scope.
 Inductive pres := PRes (s : int) (v : int) (t : array (array int)).
 *)
 
+Section  Alpha.
+
+
+Variables width height : int.
+Notation nhorizontal := (nhorizontal height).
+Notation nwidth := (nwidth width).
+Notation nheight := (nheight height).
+
+Hypothesis wh_hyp : nwidth * nhorizontal < ndigits.
+Hypothesis w_hyp : 3 < nwidth.
+Hypothesis h_hypL : 3 < nheight.
+Hypothesis h_hypU : nheight.+1 < ndigits.
+
+Notation slocksize := (slocksize width height).
+
+Hypothesis h_hprime : 2 ^ to_nat slocksize < to_nat hprime. 
+
+Notation size := seq.size.
+Notation get_border := (get_border width height).
+Notation valid_pegs := (valid_pegs width height).
+Notation horizontal := (horizontal height).
+Notation get_column := (get_column height).
+Notation cell := (cell height).
+Notation eval := (eval width height).
+Notation evalOr := (evalOr wh_hyp h_hypU).
+Notation sym_code := (sym_code height).
+Notation nhorizontalLwB := (nhorizontalLwB height).
+Notation nwidthLwB := (nwidthLwB width).
+Notation transpose := (transpose width height).
+Notation get_code := (get_code width height).
+Notation hget := (hget width height).
+Notation get_columnE := (@get_columnE width height).
+Notation hput := (hput width height).
+Notation number_of_cells := (number_of_cells width height).
+Notation valid_eval := (valid_eval width height).
+Notation valid_pos := (valid_pos width height).
+Notation has_move := (has_move width height).
+Notation cwin := (cwin width height).
+Notation cmove := (cmove width height).
+Notation mk_move := (mk_move height).
+Notation ncells := (ncells width height).
+Notation valid_htable := (valid_htable width height).
+Notation ihjE := (@ihjE width height).
+Notation ihjLd := (@ihjLd width height).
+
+Notation "t .[ i ]" := (get t i)
+  (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (set t i a)
+  (at level 1, left associativity, format "t .[ i <- a ]").
 
 Section Process.
 
@@ -65,8 +114,6 @@ Qed.
 
 Lemma hs_range : [\/ hs = unknown, hs = lossdraw | hs = drawwin].
 Proof. by apply: valid_eval0E hsV _. Qed.
-
-Notation process := (process w b beta lv hg hs ab).
 
 Definition valid_ab (a b : int) :=
   if a == loss then (b == draw) || (b == win) else (a == draw) && (b== win).
@@ -121,7 +168,7 @@ Qed.
 
 Lemma get_max_nil : get_max [::] = eval w b.
 Proof.
-rewrite evalS (negPf wNw) (negPf wNb) /= wbH /get_max.
+rewrite evalS // (negPf wNw) (negPf wNb) /= wbH /get_max.
 case/existsP : wbH => /= i /existsP [/= j ijM].
 rewrite (bigD1 i) //= maxnA [in RHS](bigD1 i) //=; congr maxn.
   rewrite (bigD1 j) ?andbT //= maxnA [in RHS](bigD1 j) //=; congr maxn.
@@ -150,8 +197,8 @@ rewrite (bigD1 (Ordinal iLw)) //= [in RHS](bigD1 (Ordinal iLw)) //= !maxnA; cong
     by move/val_eqP : HH1 => /= /eqP->.
   apply/val_eqP/eqP => /=.
   move/(congr1 (fun x => to_nat x)) : HH1 => /eqP HH2.
-  have kLhe : k < nhorizontal by apply: ltn_trans (ltn_ord _) _.
-  have jLhe : j < nhorizontal by apply: ltn_trans jLh _.
+  have kLhe : k < nhorizontal by apply: ltn_trans (ltn_ord _) _; rewrite nhorizontalE.
+  have jLhe : j < nhorizontal by apply: ltn_trans jLh _; rewrite nhorizontalE.
   rewrite [X in X == _]to_nat_lsl_one ihjE // in HH2; last by apply: ihjLd.
   rewrite [X in _ == X]to_nat_lsl_one ihjE // in HH2; last by apply: ihjLd.
   rewrite eqn_exp2l // eqn_add2l in HH2 .
@@ -162,8 +209,8 @@ rewrite -{1}[LHS]andbT [RHS]andbC.
 congr (_ && _); apply/sym_equal/idP.
 rewrite mmE; move/eqP: i1Di => i1Di; apply/eqP; contradict i1Di.
 move/(congr1 (fun x => to_nat x)) : i1Di => /eqP HH2.
-have j1Lhe : j1 < nhorizontal by apply: ltn_trans (ltn_ord _) _.
-have jLhe : j < nhorizontal by apply: ltn_trans jLh _.
+have j1Lhe : j1 < nhorizontal by apply: ltn_trans (ltn_ord _) _; rewrite nhorizontalE.
+have jLhe : j < nhorizontal by apply: ltn_trans jLh _; rewrite nhorizontalE.
 rewrite [X in X == _]to_nat_lsl_one ihjE // in HH2; last by apply: ihjLd.
 rewrite [X in _ == X]to_nat_lsl_one ihjE // in HH2; last by apply: ihjLd.
 rewrite eqn_exp2l // in HH2.
@@ -171,11 +218,11 @@ case: (ltngtP i1 i) => // [i1Li | iLi1].
   suff : i1 * nhorizontal + j1 < i * nhorizontal + j by rewrite (eqP HH2) ltnn.
   apply: leq_trans (_ : i1.+1  * nhorizontal <= _).
     by rewrite mulSn addnC ltn_add2r.
-  by apply: leq_trans (leq_addr _ _); rewrite leq_mul2r.
+  by apply: leq_trans (leq_addr _ _); rewrite leq_mul2r // nhorizontalE.
 suff : i * nhorizontal + j < i1 * nhorizontal + j1 by rewrite (eqP HH2) ltnn.
 apply: leq_trans (_ : i.+1  * nhorizontal <= _).
   by rewrite mulSn addnC ltn_add2r.
-by apply: leq_trans (leq_addr _ _); rewrite leq_mul2r.
+by apply: leq_trans (leq_addr _ _); rewrite leq_mul2r nhorizontalE.
 Qed.
 
 Definition valid_answer sc :=
@@ -246,7 +293,7 @@ Proof.
 move => ijM.
 have iLw : i < nwidth by case/and3P: ijM.
 have jLh : j < nheight by case/and3P: ijM.
-rewrite [X in _ <= X]evalS /= (negPf wNw) (negPf wNb) ifT; last first.
+rewrite [X in _ <= X]evalS //= (negPf wNw) (negPf wNb) ifT; last first.
   by apply: cmove_has_move ijM.
 rewrite (bigD1 (Ordinal iLw)) //= (leq_trans  _ (leq_maxl _ _)) //.
 by rewrite (bigD1 (Ordinal jLh)) //= leq_maxl.
@@ -291,6 +338,8 @@ Proof.
 case => ->; case => -> //; case; case => -> //; case; case => -> //.
 Qed.
 
+Notation process := (process width height w b beta lv hg hs ab).
+
 Lemma process_correct ms alpha sc sc1 v v1 ht ht1 :
   valid_answer sc -> valid_list ms -> valid_scores ms sc ->
   valid_htable ht -> valid_ab alpha beta -> uniq (map fst ms) -> 
@@ -328,7 +377,7 @@ have mmE : make_move m w = mk_move w i j.
   by rewrite [m]mE /mk_move /make_move lorC.
 case: (ab_correct _ _ _ _ E) => // [|||s2Nu vEs2 h2V].
 - by rewrite mmE -ncells_cmove //.
-- by split; rewrite ?mmE // ?valid_pegs_cmove // land_cmove.
+- by split; rewrite ?mmE // ?valid_pegs_cmove // (@land_cmove width).
 - by apply: valid_ab_rev.
 have us2Le : wcomp (up_score s2) <= eval w b.
   have /(leq_trans _)-> // := leq_eval_move ijM.
@@ -456,7 +505,7 @@ case: (neqbP _ draw) => rs2Ed; last first.
     - by move/valid_evalE: vEs2; case; case => ->.
     by move/valid_evalE: vEs2; case; case => ->.
   suff -> : eval w b = WIN by rewrite s2El.
-  apply/eqP/eval_winP; right; split => //.
+  apply/eqP/eval_winP => //; right; split => //.
   exists i; exists j; split => //.
   rewrite -mmE.
   move: vEs2; rewrite /valid_eval s2El.
@@ -503,6 +552,8 @@ Qed.
 
 End Process.
 
+Notation alpha_beta := (alpha_beta width height).
+
 Lemma alphabeta_correct ns h w b (alpha beta : int) v ht sc v1 ht1 : 
   ncells (w lor b) < ns ->
   valid_pos w b ->
@@ -515,7 +566,8 @@ elim: ns h w b alpha beta sc v v1 ht ht1 => //=
      ns IH h w b alpha beta sc v v1 ht ht1 nsL wbV Vh Vab.
 have Vhget : valid_eval w b (hget w b h ht).
   have [wbV1 Ha _ _] := wbV.
-  by case: Vh => _ _  /(_ w b h wbV1 Ha) /valid_entries_prop.
+  case: Vh => _ _  /(_ w b h wbV1 Ha) /valid_entries_prop.
+  by apply.
 case: (ifP (_ =? unknown)) => Hh; last first.
   have Vahget : valid_answer (hget w b h ht).
     apply: valid_eval_answer Vhget _.
@@ -526,10 +578,10 @@ case: (ifP (_ =? unknown)) => Hh; last first.
     case E : find_moves => [||m|ms] //.
     - case => <- _ <-; split => //.
         by left; apply: Or33.
-      by rewrite /valid_eval (find_moves_win _ E).
+      by rewrite /valid_eval (find_moves_win _ _ _ _ _ E).
     - case => <- _ <-; split => //.
         by left; apply: Or32.
-      by rewrite /valid_eval (find_moves_draw _ E).
+      by rewrite /valid_eval (find_moves_draw _ _ _ _ E).
     - case E1 : alpha_beta => [sc2 v2 ht2] [rsc2E v2E h2E].
       have [] := IH (h + 1) b (make_move m w) (rev_val beta) 
                     (rev_val draw) sc2 v v2 ht ht2 => //.
@@ -545,14 +597,14 @@ case: (ifP (_ =? unknown)) => Hh; last first.
       move=> Vasce Vesc2 Vth2; split => //.
       - by rewrite -rsc2E; apply: valid_answer_rev.
       - have:= Vesc2; rewrite /make_move [_ lor w]lorC.
-        rewrite /valid_eval (find_moves_forced _ E) // -rsc2E.
+        rewrite /valid_eval (find_moves_forced _ _ _ _ _ E) // -rsc2E.
         by case/or3P: (evalOr b (w lor m))=> /eqP ->; case: Vasce; case=> ->.
       by rewrite -h2E.
     apply: process_correct => //.
     - by move/eqP: Hh2 => ->.
     - have : 0 < seq.size ms by apply: find_moves_moves_size E.
       case: ms E => // m ms /find_moves_moves_cmove HH _.
-      case: (HH m) => //; first by rewrite inE eqxx.
+      case: (HH _ _ _ _ m) => //; first by rewrite inE eqxx.
       move=> i1 [j1 [i1j1C _ _]].
       have i1Lw : i1 < nwidth by case/and3P: i1j1C.
       have j1Lh : j1 < nheight by case/and3P: i1j1C.
@@ -574,10 +626,10 @@ case: (ifP (_ =? unknown)) => Hh; last first.
   case E : find_moves => [||m|ms] //.
   - case => <- _ <-; split => //.
       by left; apply: Or33.
-    by rewrite /valid_eval (find_moves_win _ E).
+    by rewrite /valid_eval (find_moves_win _ _ _ _ _ E).
   - case => <- _ <-; split => //.
       by left; apply: Or32.
-    by rewrite /valid_eval (find_moves_draw _ E).
+    by rewrite /valid_eval (find_moves_draw _ _ _ _ E).
   - case E1 : alpha_beta => [sc2 v2 ht2] [rsc2E v2E ht2E].
     have [] := IH (h + 1) b (make_move m w) (rev_val draw) 
                   (rev_val alpha) sc2 v v2 ht ht2 => //.
@@ -592,14 +644,14 @@ case: (ifP (_ =? unknown)) => Hh; last first.
     move=> Hasc2 Hesc2 Hth2; split => //.
     - by rewrite -rsc2E; apply: valid_answer_rev.
     - have:= Hesc2; rewrite /make_move [_ lor w]lorC.
-      rewrite /valid_eval (find_moves_forced _ E) // -rsc2E.
+      rewrite /valid_eval (find_moves_forced _ _ _ _ _ E) // -rsc2E.
       by case/or3P: (evalOr b (w lor m))=> /eqP ->; case: Hasc2; case=> ->.
     by rewrite -ht2E.
   apply: process_correct => //.
   - by move/eqP: Hh1 => ->.
   - have : 0 < seq.size ms by apply: find_moves_moves_size E.
     case: ms E => // m ms /find_moves_moves_cmove HH _.
-    case: (HH m) => //; first by rewrite inE eqxx.
+    case: (HH _ _ _ _ m) => //; first by rewrite inE eqxx.
     move=> i1 [j1 [i1j1C _ _]].
     have i1Lw : i1 < nwidth by case/and3P: i1j1C.
     have j1Lh : j1 < nheight by case/and3P: i1j1C.
@@ -619,10 +671,10 @@ case: (ifP (_ =? unknown)) => Hh; last first.
 case E : find_moves => [||m|ms] //.
 - case => <- _ <-; split => //.
     by left; apply: Or33.
-  by rewrite /valid_eval (find_moves_win _ E).
+  by rewrite /valid_eval (find_moves_win _ _ _ _ _ E).
 - case => <- _ <-; split => //.
     by left; apply: Or32.
-  by rewrite /valid_eval (find_moves_draw _ E).
+  by rewrite /valid_eval (find_moves_draw _ _ _ _ E).
 - case E1 : alpha_beta => [sc2 v2 ht2] [rsc2E v2E ht2E].
   have [] := IH (h + 1) b (make_move m w) (rev_val beta) 
                  (rev_val alpha) sc2 v v2 ht ht2 => //.
@@ -635,14 +687,14 @@ case E : find_moves => [||m|ms] //.
   move=> Hasc2 Hesc2 Hth2; split => //.
   - by rewrite -rsc2E; apply: valid_answer_rev.
   - have:= Hesc2; rewrite /make_move [_ lor w]lorC.
-    rewrite /valid_eval (find_moves_forced _ E) // -rsc2E.
+    rewrite /valid_eval (find_moves_forced _ _ _ _ _ E) // -rsc2E.
     by case/or3P: (evalOr b (w lor m))=> /eqP ->; case: Hasc2; case=> ->.
   by rewrite -ht2E.
 apply: process_correct => //.
 - by move/eqP: Hh => ->.
 - have : 0 < seq.size ms by apply: find_moves_moves_size E.
   case: ms E => // m ms /find_moves_moves_cmove HH _.
-  case: (HH m) => //; first by rewrite inE eqxx.
+  case: (HH _ _ _ _ m) => //; first by rewrite inE eqxx.
   move=> i1 [j1 [i1j1C _ _]].
   have i1Lw : i1 < nwidth by case/and3P: i1j1C.
   have j1Lh : j1 < nheight by case/and3P: i1j1C.
@@ -658,6 +710,8 @@ apply: process_correct => //.
 by apply: find_moves_moves_uniq E.
 Qed.
 
+Notation is_won := (is_won height).
+
 Definition valid_posb w b := 
   [&& (w lor b) >> (width * horizontal) == 0, ~~ is_won w, ~~ is_won b, 
      w land b == 0 & all (fun x =>         
@@ -670,25 +724,26 @@ Lemma valid_posb_correct w b : valid_posb w b -> valid_pos w b.
 Proof.
 case/and5P => /eqP wbswh_eq0 NWw Nwb /eqP wb_eq0 /allP HiE.
 suff wbV : valid_pegs (w lor b).
-  split => //; first by rewrite -(@is_won_cwin w b).
-  by rewrite -(@is_won_cwin b w) // lorC.
+  split => //; first by rewrite -(@is_won_cwin _ _ _ _ _ _ w b).
+  by rewrite -(@is_won_cwin _ _ _ _ _ _ b w) // lorC.
 apply/andP; split.
   apply/forallP => i; apply/implyP => Hb.
   case: nltbP => // /negP.
   rewrite -leqNgt => whLi.
   rewrite (bit_false_lt _ _ _ whLi) // in Hb.
   rewrite -[X in _ < X]mul1n.
-  rewrite -ltn_divLR //.
+  rewrite -ltn_divLR //; last by rewrite expn_gt0.
   have : to_nat 0 = 0%N by [].
   by rewrite -wbswh_eq0 to_nat_lsr => ->.
 apply/forallP => i; apply/implyP => /nltbP iLw.
-rewrite opzsE; last by [].
+rewrite opzsE; last by apply/nltbP/(ltn_trans _ h_hypU).
 have := HiE (to_nat i).
 rewrite mem_iota => /(_ iLw) /hasP[j Hj1 Hj2].
 rewrite mem_iota /= add0n in Hj1.
 apply/existsP; exists (of_nat j); apply/andP; split.
-  apply/nlebP; rewrite of_natK //.
-  by apply: ltn_trans nhorizontalLwB.
+  apply/nlebP; rewrite of_natK //; last first.
+    by apply: ltn_trans nhorizontalLwB.
+  by rewrite -ltnS -nhorizontalE.
 by rewrite to_natK in Hj2.
 Qed.
 
@@ -703,8 +758,8 @@ move=> /valid_posb_correct wbV Hht.
 have := @alphabeta_correct (1 + nheight * nwidth) 0 w b loss win zero ht.
 rewrite /htop_eval.
 case: alpha_beta => sc1 v1 ht1 /(_ sc1 v1 ht1) [] //.
-rewrite ltnS (leq_trans (leq_ncells_landr empty_state _)) // land0.
-by rewrite ncells_empty_state.
+rewrite ltnS (leq_trans (leq_ncells_landr _ _ empty_state _)) // land0.
+by rewrite ncells_empty_state mulnC.
 Qed.
 
 Definition top_eval w b := htop_eval w b (make_hash tt) .
@@ -712,11 +767,15 @@ Definition top_eval w b := htop_eval w b (make_hash tt) .
 Lemma topeval_correct w b : valid_posb w b -> valid_eval w b (top_eval w b).
 Proof.
 move=> wbVb; apply: htopeval_correct => //.
-apply: valid_htable_make_hash.
+by apply: valid_htable_make_hash.
 Qed.
+
+Notation parse_string := (parse_string width height).
 
 Definition get_position s :=
    match parse_string s with
    (wstate,bstate,turn) =>
    if turn then (wstate,bstate) else (bstate,wstate)
    end.
+
+End Alpha.

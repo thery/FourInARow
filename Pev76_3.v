@@ -10,11 +10,13 @@ Require Import Pmoves.
 Require Import Phash.
 Require Import Palphabeta.
 Require Import FourInARow.
+Require Import FourInARow76.
+Require Import Eval76.
 
 (******************************************************************************)
 (*                                                                            *)
 (*                                                                            *)
-(*    First position                                                          *)
+(*    Third position                                                          *)
 (*                                                                            *)
 (*                                                                            *)
 (******************************************************************************)
@@ -25,28 +27,30 @@ Import Uint63Axioms.
 Import Uint63.
 Open Scope uint63_scope.
 
-Definition ev1 := (
+Definition ev3 := (
                  "_______"
               ++ "_______"
               ++ "_______"
               ++ "_______"
               ++ "_______"
-              ++ "O__X___")%string.
+              ++ "__OX___")%string.
 
+Definition ew3 :=  (get_position 7 6 ev3).1.
+Definition eb3 :=  (get_position 7 6 ev3).2.
 
-Definition ew1 :=  (get_position ev1).1.
-Definition eb1 :=  (get_position ev1).2.
-
-Lemma eval_ev1E : top_eval ew1 eb1 = win.
+Lemma eval_ev3E : top_eval76 ew3 eb3 = win.
 Proof.
-native_cast_no_check (refl_equal win). 
+native_cast_no_check (refl_equal win).
 Time Qed.
+(*
+Admitted.
+*)
 
-Lemma eval_ev1 : eval ew1 eb1 = WIN.
+Lemma eval_ev3 : eval 7 6 ew3 eb3 = WIN.
 Proof.
-suff : valid_eval ew1 eb1 win.
-  by rewrite /valid_eval; case/or3P: (evalOr ew1 eb1) => /eqP->.
-rewrite -eval_ev1E.
-by apply: topeval_correct.
+suff : valid_eval 7 6 ew3 eb3 win.
+  by rewrite /valid_eval; case/or3P: (@evalOr 7 6 isT isT ew3 eb3) => /eqP->.
+rewrite -eval_ev3E.
+by apply: topeval76_correct.
 Qed.
 

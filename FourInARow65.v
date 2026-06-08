@@ -7,6 +7,12 @@
 From Stdlib Require Import ssreflect ZArith Ascii List String PrimInt63.
 From Stdlib Require Import PArray.
 Require Import -(notations) ssr_int.
+From Stdlib Require Import Lia.
+Require Import Pbasic.
+Require Import Pmoves.
+Require Import Phash.
+Require Import Palphabeta.
+Require Import FourInARow.
 
 Import PrimInt63Notations.
 Import Uint63Axioms.
@@ -17,14 +23,14 @@ Open Scope uint63_scope.
 Section Solver.
 
 (* Width of the board *)
-Variable width : int.
+Definition width : int := 6.
 Definition nwidth := to_nat width.
 (* Height of the board *)
-Variable height : int.
+Definition height : int := 5.
 Definition nheight := to_nat height.
 (* Shift for moving horizontally *)
 Definition horizontal := height + 1.
-Definition nhorizontal :=  to_nat horizontal.
+Definition nhorizontal := (nheight + 1)%nat.
 Definition horizontal2 := 2 * horizontal.
 (* Shift for moving vertically *)
 Definition vertical := 1.
@@ -68,8 +74,7 @@ Definition losswin := loss + win.
 (* Size of the lock 25 bits *)
 Definition locksize := 25.
 (* Size of the remain bits that are not in the lock *)
-Definition slocksize := 
-  if locksize <? number_of_cells then number_of_cells - locksize else 0.
+Definition slocksize := number_of_cells - locksize.
 (* Size of hash table should have HPRIME > 2^SLOCKSIZE *)
 (* Definition hprime := 8388609. *)
 Definition hprime := 16777259.
@@ -166,12 +171,6 @@ Fixpoint insert_fmove (m : int) (v : int) l :=
     if v ?= v1 is Lt then (m1, v1) :: (insert_fmove m v l1) else (m, v) :: l
   else (m, v) :: nil.
 
-Inductive fmove := 
- | Win
- | Draw
- | Forced (_ : int)
- | Moves (_: moves).
-
 Definition make_moves l :=
   if l is nil then Draw else Moves l.
 
@@ -214,26 +213,6 @@ Fixpoint fms columns res :=
         let v := (values.[log2 move]) in
         fms columns (insert_fmove move v res)
    end.
-
-Lemma fmsE columns res :
-fms columns res =
-  match columns with 
-  | nil => make_moves res
-  | column :: columns =>
-      let move := border land column in
-      if is_zero move then fms columns res
-      else
-      if is_won (make_move move wstate) then Win
-      else
-      if is_won (make_move move bstate) then 
-        fmt columns (Forced move)
-      else
-        let v := (values.[log2 move]) in
-        fms columns (insert_fmove move v res)
-   end.
-Proof.
-by case: columns.
-Qed.
 
 End FindMoves.
 
@@ -373,9 +352,6 @@ Definition hget (wstate bstate : int) hg
 
 Definition is_nempty_move (m : moves) := if m is _ :: _ then true else false.
 
-(* Process result *)
-Inductive pres := PRes (s : int) (v : int) (t : array (array int)).
-
 Section Process.
 
 Variables (wstate bstate : int) (beta : int) (lvisited : int) 
@@ -418,9 +394,6 @@ Fixpoint process ms alpha score visited htable :=
 
 End Process.
 
-(* alpha-beta result *)
-Inductive ares := ARes (a : int) (b : int) (c : bool).
-
 Section Alpha.
 
 (* alpha beta pruning search *)
@@ -459,44 +432,6 @@ Fixpoint alpha_beta nstruct hg wstate bstate alpha beta
      end
   end.
 
-Lemma alpha_betaE nstruct hg wstate bstate alpha beta 
-                    visited htable  :
- alpha_beta nstruct hg wstate bstate alpha beta 
-                    visited htable =
-  let hscore := hget wstate bstate hg htable in
-  let (alpha,beta,flag) :=
-    (if (hscore =? unknown) then ARes alpha beta false else
-    if negb ((hscore land 1) =? 0) then ARes alpha beta true else
-    if (hscore =? drawwin) then
-      if (beta =? draw) then ARes alpha beta true else ARes draw beta false
-    else
-      if (alpha =? draw) then ARes alpha beta true 
-      else ARes alpha draw false) in
-  if flag then PRes hscore visited htable else
-  match find_moves wstate bstate with
-  | Win => PRes win visited htable
-  | Draw => PRes draw visited htable
-  | Forced move =>
-      match nstruct with 
-     | 0%nat => PRes unknown visited htable
-     | S nstruct =>
-      let (score,visited,htable) := 
-        alpha_beta nstruct (hg + 1) bstate (make_move move wstate) 
-                    (rev_val beta) (rev_val alpha) 
-                    visited htable : pres in
-      PRes (rev_val score) visited htable 
-     end
-  | Moves ms =>
-     match nstruct with 
-     | 0%nat => PRes unknown visited htable
-     | S nstruct =>
-     process wstate bstate beta visited hg hscore 
-            (alpha_beta nstruct (hg + 1))
-             ms alpha loss visited htable
-     end
-  end.
-Proof. by case: nstruct. Qed.
-
 Definition eval_position s :=
    match parse_string s with
    (wstate,bstate,turn) =>
@@ -510,63 +445,3 @@ Definition eval_position s :=
 End Alpha.
 
 End Solver.
-
-Definition ex0 := (
-                 "_______"
-              ++ "_______"
-              ++ "_______"
-              ++ "_______"
-              ++ "_______"
-              ++ "O__X___")%string.
-
-Definition ex1 := (
-                 "___O___"
-              ++ "___X___"
-              ++ "___O___"
-              ++ "___X___"
-              ++ "__OO___"
-              ++ "__XX___")%string.
-
-Definition ex2 := (
-                 "___X___"
-              ++ "__OX___"
-              ++ "__XO___"
-              ++ "__OX___"
-              ++ "__XO___"
-              ++ "__OX__O")%string.
-
-
-Definition ex3 := (
-                 "___O___"
-              ++ "___X___" 
-              ++ "___O___"
-              ++ "___X___"
-              ++ "___O___"
-              ++ "XO_X___")%string.
-
-(*
-Require Import Extraction.
-
-From Stdlib Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOCamlInt63 ExtrOCamlPString.
-
-Extract Constant PrimArray.array "'a" => "'a Parray.t".
-
-Extract Constant PrimArray.make => "Parray.make".
-Extract Constant PrimArray.get => "Parray.get".
-Extract Constant PrimArray.default => "Parray.default".
-Extract Constant PrimArray.set => "Parray.set".
-Extract Constant PrimArray.length => "Parray.length".
-Extract Constant PrimArray.copy => "Parray.copy".
-
-Definition val1 := (eval_position ex0).
-
-Extraction "FF" val1.
-*)
-
-(*
-Time Eval native_compute in string_of_score (eval_position ex1).
-Time Eval native_compute in string_of_score (eval_position ex2).
-Time Eval native_compute in string_of_score (eval_position ex3).
-Time Eval native_compute in string_of_score (eval_position ex4).
-
-*)
