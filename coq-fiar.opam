@@ -47,12 +47,13 @@ Four-In-a-Row in Rocq
 | [Pev67_4](./Pev67_4.v)            | forth position for 6x7 Board             |
 | [Pev67_5](./Pev67_5.v)            | fifth position for 6x7 Board             |
 | [Pev67_6](./Pev67_6.v)            | sixth position for 6x7 Board             |
-| [Pmain67](./Pmain67.v)            | main theorem for 6x7                     |
 | [Pev76_1](./Pev76_1.v)            | first position for 7x6 Board             |
 | [Pev76_2](./Pev76_2.v)            | second position for 7x6 Board            |
 | [Pev76_3](./Pev76_3.v)            | third position for 7x6 Board             |
 | [Pev76_4](./Pev76_4.v)            | forth position for 7x6 Board             |
+| [Pmain67](./Pmain67.v)            | main theorem for 6x7                     |
 | [Pmain76](./Pmain76.v)            | main theorem for 7x6                     |
+| [Ptable](./Ptable.v)              | the table                                |
 
 A note about this development is available 
 [here](https://inria.hal.science/hal-05625464)."""
