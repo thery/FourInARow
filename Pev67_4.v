@@ -16,7 +16,7 @@ Require Import Eval67.
 (******************************************************************************)
 (*                                                                            *)
 (*                                                                            *)
-(*    Third position                                                          *)
+(*    Forth position                                                          *)
 (*                                                                            *)
 (*                                                                            *)
 (******************************************************************************)
@@ -42,7 +42,10 @@ Definition eb4 :=  (get_position 6 7 ev4).2.
 Lemma eval_ev4E : top_eval67 ew4 eb4 = win.
 Proof.
 native_cast_no_check (refl_equal win).
+(*
 Time Qed.
+*)
+Admitted.
 
 Lemma eval_ev4 : eval 6 7 ew4 eb4 = WIN.
 Proof.

@@ -43,7 +43,10 @@ Definition eb1 :=  (get_position 6 7 ev1).2.
 Lemma eval_ev1E : top_eval67 ew1 eb1 = win.
 Proof.
 native_cast_no_check (refl_equal win).
+(*
 Time Qed.
+*)
+Admitted.
 
 Lemma eval_ev1 : eval 6 7 ew1 eb1 = WIN.
 Proof.

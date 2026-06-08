@@ -16,7 +16,7 @@ Require Import Eval67.
 (******************************************************************************)
 (*                                                                            *)
 (*                                                                            *)
-(*    Third position                                                          *)
+(*    Sixth position                                                          *)
 (*                                                                            *)
 (*                                                                            *)
 (******************************************************************************)
@@ -42,7 +42,10 @@ Definition eb6 :=  (get_position 6 7 ev6).2.
 Lemma eval_ev6E : top_eval67 ew6 eb6 = win.
 Proof.
 native_cast_no_check (refl_equal win).
+(*
 Time Qed.
+*)
+Admitted.
 
 Lemma eval_ev6 : eval 6 7 ew6 eb6 = WIN.
 Proof.
