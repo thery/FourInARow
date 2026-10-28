@@ -7,7 +7,7 @@
 
 From Stdlib Require Import ZArith Ascii List String PrimInt63.
 From Stdlib Require Import -(notations) PArray.
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 From HB Require Import structures.
 
 From Stdlib Require Import Lia.
@@ -37,7 +37,7 @@ Proof.
 move=> Hv Ht.
 rewrite -htop_eval56_equiv.
 apply: htopeval_correct; [done|done|done|done| |done|done].
-rewrite -to_nat_lsl_one; last by [].
+rewrite -to_nat_lsl_one; first by [].
 by apply: nltbP.
 Qed.
 
@@ -48,6 +48,6 @@ Proof.
 move=> Hv.
 rewrite -[top_eval56 _ _]htop_eval56_equiv.
 apply: topeval_correct; [done|done|done|done| |done].
-rewrite -to_nat_lsl_one; last by [].
+rewrite -to_nat_lsl_one; first by [].
 by apply: nltbP.
 Qed.

@@ -63,9 +63,9 @@ A note about this development is available
 - Author(s):
   - Laurent Théry
 - License: [MIT License](LICENSE)
-- Compatible Rocq/Coq versions: 9.1 or later
+- Compatible Rocq/Coq versions: 9.2 or later
 - Additional dependencies:
-  - [MathComp ssreflect 2.5 or later](https://math-comp.github.io)
+  - [MathComp ssreflect 2.6 or later](https://math-comp.github.io)
 - Rocq/Coq namespace: `FourInARow`
 - Related publication(s): none
 

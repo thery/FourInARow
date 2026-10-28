@@ -1,6 +1,6 @@
 From Stdlib Require Import ZArith Ascii List String PrimInt63.
 From Stdlib Require Import -(notations) PArray.
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 From HB Require Import structures.
 
 From Stdlib Require Import Lia.

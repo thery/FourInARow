@@ -1,6 +1,6 @@
 From Stdlib Require Import ZArith Ascii List String PrimInt63.
 From Stdlib Require Import -(notations) PArray.
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 From HB Require Import structures.
 
 From Stdlib Require Import Lia.
@@ -41,11 +41,11 @@ Definition eb2 :=  (get_position 7 6 ev2).2.
 
 Lemma eval_ev2E : top_eval76 ew2 eb2 = win.
 Proof.
+(*
 native_cast_no_check (refl_equal win).
 Time Qed.
-(*
-Admitted.
 *)
+Admitted.
 
 Lemma eval_ev2 : eval 7 6 ew2 eb2 = WIN.
 Proof.

@@ -1,6 +1,6 @@
 From Stdlib Require Import ZArith Ascii List String PrimInt63.
 From Stdlib Require Import -(notations) PArray.
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 From HB Require Import structures.
 
 From Stdlib Require Import Lia.
@@ -31,36 +31,36 @@ Open Scope uint63_scope.
 Section Phash.
 
 Variables width height : int.
-Notation nhorizontal := (nhorizontal height).
-Notation nwidth := (nwidth width).
-Notation nheight := (nheight height).
+Abbreviation nhorizontal := (nhorizontal height).
+Abbreviation nwidth := (nwidth width).
+Abbreviation nheight := (nheight height).
 
 Hypothesis wh_hyp : nwidth * nhorizontal < ndigits.
 Hypothesis w_hyp : 3 < nwidth.
 Hypothesis h_hypL : 3 < nheight.
 Hypothesis h_hypU : nheight.+1 < ndigits.
 
-Notation slocksize := (slocksize width height).
+Abbreviation slocksize := (slocksize width height).
 
 Hypothesis h_hprime : 2 ^ to_nat slocksize < to_nat hprime. 
 
-Notation size := seq.size.
-Notation get_border := (get_border width height).
-Notation valid_pegs := (valid_pegs width height).
-Notation horizontal := (horizontal height).
-Notation get_column := (get_column height).
-Notation cell := (cell height).
-Notation eval := (eval width height).
-Notation evalOr := (evalOr wh_hyp h_hypU).
-Notation sym_code := (sym_code height).
-Notation nhorizontalLwB := (nhorizontalLwB height).
-Notation nwidthLwB := (nwidthLwB width).
-Notation transpose := (transpose width height).
-Notation get_code := (get_code width height).
-Notation hget := (hget width height).
-Notation get_columnE := (@get_columnE width height).
-Notation hput := (hput width height).
-Notation number_of_cells := (number_of_cells width height).
+Abbreviation size := seq.size.
+Abbreviation get_border := (get_border width height).
+Abbreviation valid_pegs := (valid_pegs width height).
+Abbreviation horizontal := (horizontal height).
+Abbreviation get_column := (get_column height).
+Abbreviation cell := (cell height).
+Abbreviation eval := (eval width height).
+Abbreviation evalOr := (evalOr wh_hyp h_hypU).
+Abbreviation sym_code := (sym_code height).
+Abbreviation nhorizontalLwB := (nhorizontalLwB height).
+Abbreviation nwidthLwB := (nwidthLwB width).
+Abbreviation transpose := (transpose width height).
+Abbreviation get_code := (get_code width height).
+Abbreviation hget := (hget width height).
+Abbreviation get_columnE := (@get_columnE width height).
+Abbreviation hput := (hput width height).
+Abbreviation number_of_cells := (number_of_cells width height).
 Notation "t .[ i ]" := (get t i)
   (at level 1, left associativity, format "t .[ i ]").
 Notation "t .[ i <- a ]" := (set t i a)
@@ -90,7 +90,7 @@ move=> mLm.
 elim: n nn a => [|n IH] nn a Ha.
   rewrite Z.add_0_r => Hn.
   case: lebP => /=; rewrite add_spec //. 
-  rewrite to_Z_0 Z.add_0_r Z.mod_small; last by apply: to_Z_bounded.
+  rewrite to_Z_0 Z.add_0_r Z.mod_small; first by apply: to_Z_bounded.
   by case: ltbP => //; lia.
 move=> Hn H1.
 have nnB := to_Z_bounded nn.
@@ -120,7 +120,7 @@ case: lebP => //=; last first.
   rewrite F4.
   move/Z.nle_gt => H3.
   have := IH (nn - 1) a.[nn - 1<-make m v] F F'.
-  rewrite ifN; last first.
+  rewrite ifN.
     by case: lebP; rewrite ?n1E  F5 //; lia.
   move=> ->; try lia.
   rewrite get_set_other // => HH.
@@ -128,17 +128,17 @@ case: lebP => //=; last first.
 rewrite F4 => H3.
 case: ltbP => [H4|/Z.nlt_ge H4]; last first.
   have := IH (nn - 1) a.[nn - 1<-make m v] F F'.
-  rewrite ifN //.
+  rewrite ifN //; last first.
     rewrite get_set_other //.
-    apply; lia.
-    by move=> HH; move: H4; rewrite -HH; lia.
+      by move=> HH; move: H4; rewrite -HH; lia.
+    by apply; lia.
   rewrite andbC negb_and; case: ltbP => //.
   by rewrite n1E; lia.
 have := IH (nn - 1) a.[nn - 1<-make m v] F F'.
 case: lebP; rewrite F5 n1E; try lia.
 case: ltbP; rewrite n1E //= => V1 V2 -> //; try lia.
 suff H : nn - 1 = i.
-  rewrite H get_set_same.
+  rewrite H get_set_same; last first.
     by rewrite length_make // ?mLm.
   case ltbP; try lia.
   have /lebP := Hn; lia.
@@ -159,7 +159,7 @@ move=> mLm jLn.
 elim: n nn a => [|n IH] nn a Ha.
   rewrite Z.add_0_r => Hn.
   case: lebP => //=; rewrite add_spec //. 
-  rewrite to_Z_0 Z.add_0_r Z.mod_small; last by apply: to_Z_bounded.
+  rewrite to_Z_0 Z.add_0_r Z.mod_small; first by apply: to_Z_bounded.
   by case: ltbP => //; lia.
 move=> Hn H1.
 have nnB := to_Z_bounded nn.
@@ -189,7 +189,7 @@ case: lebP => //=; last first.
   rewrite F4.
   move/Z.nle_gt => H3.
   have := IH (nn - 1) a.[nn - 1<-make m v] F F'.
-  rewrite ifN; last first.
+  rewrite ifN.
     by case: lebP; rewrite ?n1E  F5 //; lia.
   move=> ->; try lia.
   rewrite get_set_other // => HH.
@@ -198,17 +198,16 @@ rewrite F4 => H3.
 case: ltbP => [H4|/Z.nlt_ge H4]; last first.
   have := IH (nn - 1) a.[nn - 1<-make m v] F F'.
   rewrite ifN //.
-    rewrite get_set_other //.
-    apply; lia.
+    rewrite andbC negb_and; case: ltbP => //.
+    by rewrite n1E; lia.
+  rewrite get_set_other //.
     by move=> HH; move: H4; rewrite -HH; lia.
-  rewrite andbC negb_and; case: ltbP => //.
-  by rewrite n1E; lia.
+  by apply; lia.
 have := IH (nn - 1) a.[nn - 1<-make m v] F F'.
 case: lebP; rewrite F5 n1E; try lia.
 case: ltbP; rewrite n1E //= => V1 V2 -> //; try lia.
 suff H : nn - 1 = i.
-  rewrite H get_set_same.
-    by rewrite get_make //.
+  rewrite H get_set_same; last by rewrite get_make.
   case ltbP; try lia.
   have /lebP := Hn; lia.
 apply: to_Z_inj.
@@ -221,9 +220,9 @@ Proof.
 move=> nLl.
 have nB := to_Z_bounded n.
 rewrite init_matrix_length1 //.
-rewrite length_make // nLl //.
-rewrite length_make nLl; apply/lebP; lia.
-by rewrite Z2Nat.id; lia.
+- by rewrite length_make nLl; apply/lebP; lia.
+- by rewrite Z2Nat.id; lia.
+by rewrite length_make // nLl.
 Qed.
 
 Lemma make_matrix_length2 (A : Type) n m  (v : A) i : 
@@ -323,7 +322,7 @@ have xE : x = of_nat i * horizontal + of_nat j.
 pose z2 := to_nat (up_log2 (get_column (w2 lor b2) (of_nat i))).
 have z2Lh : z2 < nhorizontal.
   have := valid_pegs_opzs iLw w2b2V.
-  rewrite opzsE' //; last by apply/nltbP/ltnW.
+  rewrite opzsE' //; first by apply/nltbP/ltnW.
   move => /andP[/nlebP uLh _].
   by apply: leq_ltn_trans uLh _; rewrite nhorizontalE.
 have Hcg2 : cell (get_border w2 b2) i z2.
@@ -351,7 +350,7 @@ elim: i j k s1 s2 => /= [j k s1 s2 _ _|i IH j k s1 s2 iLw kLh jLw].
 have kLw : k < nwB by apply: ltn_trans nhorizontalLwB.
 have iLw' : i < nwB by apply: ltn_trans _ nwidthLwB.
 have kE : to_nat(of_nat k) = k by rewrite of_natK.
-rewrite IH //; last by apply: ltnW.
+rewrite IH //; first by apply: ltnW.
 have ijE :  to_nat(of_nat (i - j.+1)) = (i - j.+1)%N.
   by rewrite of_natK // (leq_ltn_trans (leq_subr _ _ )).
 have ijhE : to_nat (of_nat (i - j.+1) * horizontal) = 
@@ -370,14 +369,14 @@ have ijhkE : to_nat (of_nat (i - j.+1) * horizontal + of_nat k) =
   by apply: leq_subr.
 case: ltngtP => [iLj|jLi|<-] //; last first.
 - rewrite !subnn cell_lor /cell mul_0_l add_0_l.
-  rewrite bit_lsl ifT /=; last first.
+  rewrite bit_lsl ifT /=.
     by case: nltbP => // [] []; rewrite of_natK.
   rewrite land_spec (@full_first_column_spec width height) //.
   by case: nltbP; rewrite ?andbT // of_natK.
-- rewrite /cell bit_lsr /= ifT.
+- rewrite /cell bit_lsr /= ifT; last first.
     suff -> : of_nat (i.+1 - j.+1) = 1 + of_nat (i - j.+1).
       by rewrite mul_add_distr_r mul_1_l add_assoc.
-    apply: to_nat_inj; rewrite of_natK //; last first.
+    apply: to_nat_inj; rewrite of_natK //.
       by apply: leq_ltn_trans (leq_subr _ _) (leq_ltn_trans _ nwidthLwB).
     rewrite to_nat_add ?add1n ?ijE ?subSn //.
     rewrite (leq_ltn_trans _ nwidthLwB) //.
@@ -414,15 +413,15 @@ have jihkE : to_nat (of_nat (j - i) * horizontal + of_nat k) =
 case: nltbP; rewrite jihkE.
   rewrite ltnNge (leq_trans _ (leq_addr _ _)) // -[X in X <= _]mul1n leq_mul2r.
   by rewrite subn_gt0 iLj orbT.
-move=> jihkLh hLjihk; rewrite andbF orbF /cell bit_lsl ifN.
+move=> jihkLh hLjihk; rewrite andbF orbF /cell bit_lsl ifN; last first.
   congr bit.
   rewrite minus_addE add_comm -mul_N1_l add_assoc -mul_add_distr_r.
   congr (_ * _ + _).
   rewrite add_comm -minus_addE.
   apply: to_nat_inj.
-  rewrite to_nat_sub; last first.
-  - by rewrite [X in X < _]of_natK (leq_ltn_trans (leq_subr _ _)).
+  rewrite to_nat_sub.
   - by rewrite jiE leq_subRL ?addn1 // ltnW.
+  - by rewrite [X in X < _]of_natK (leq_ltn_trans (leq_subr _ _)).
   rewrite subn1 [in LHS]jiE [RHS]of_natK subnS //.
   by rewrite prednK ?subn_gt0 // (leq_trans (leq_subr _ _)) // ltnW.
 rewrite negb_or.
@@ -461,16 +460,16 @@ Lemma sym_code_bound k r v :
 Proof.
 elim: k r v => //= [|k IH  r v kLw rLwh vLkh]; first by rewrite subn0.
 apply: IH; first by apply: ltnW.
-- apply: to_nat_lor_bound.
+  apply: to_nat_lor_bound.
     rewrite to_nat_lslW modn_small //.
-    rewrite -[(nwidth - k)%N]prednK; last by rewrite subn_gt0.
+      apply: ltn_trans (_ : 2 ^ (nwidth * nhorizontal) < _); last first.
+        by rewrite nwB_pow ltn_exp2l.
+      rewrite -[nwidth]prednK; first by apply: ltn_trans w_hyp.
+      rewrite mulSn addnC expnD ltn_mul2r expn_gt0 (leq_trans rLwh) //.
+      by rewrite leq_exp2l // leq_mul2r // -subn1 leq_sub // nhorizontalE.
+    rewrite -[(nwidth - k)%N]prednK; first by rewrite subn_gt0.
     by rewrite mulSn addnC expnD ltn_mul2r expn_gt0 //= -subnS.
-  apply: ltn_trans (_ : 2 ^ (nwidth * nhorizontal) < _); last first.
-    by rewrite nwB_pow ltn_exp2l.
-  rewrite -[nwidth]prednK; last by apply: ltn_trans w_hyp.
-  rewrite mulSn addnC expnD ltn_mul2r expn_gt0 (leq_trans rLwh) //.
-  by rewrite leq_exp2l // leq_mul2r // -subn1 leq_sub // nhorizontalE.
-- rewrite landC; apply: to_nat_land_bound.
+  rewrite landC; apply: to_nat_land_bound.
   apply: ltn_bit.
     apply: leq_ltn_trans wh_hyp; rewrite leq_mul2r nhorizontalE //=.
     by rewrite leq_subLR leq_addl.
@@ -613,7 +612,7 @@ suff -> : get_column (sym_code nwidth zero w lor sym_code nwidth zero b) i =
 apply: to_nat_inj.
 have -> : width - (i + 1) = of_nat (to_nat (width - (i + 1))) by rewrite to_natK.
 have {1}-> : i = of_nat (to_nat i) by rewrite to_natK.
-rewrite [LHS]get_columnE // [RHS]get_columnE //; last first.
+rewrite [LHS]get_columnE // [RHS]get_columnE //.
   by rewrite wiSE ltn_subLR // addSn ltnS leq_addl.
 apply: eq_bigr => j _.
 rewrite 2!cell_lor.
@@ -660,7 +659,7 @@ have [kLwh|whLk] := ltnP (to_nat k) (nwidth * nhorizontal); last first.
       apply/idP => HH.
       have : to_nat k %/ nhorizontal < nwidth.
         by apply: valid_pegs_get_border_width w2b2V HH.
-      rewrite ltn_divLR //; last by rewrite nhorizontalE.
+      rewrite ltn_divLR //; first by rewrite nhorizontalE.
       by rewrite ltnNge whLk.
     rewrite orFb.
     suff : bit (w2 lor b2) k = false by rewrite lor_spec; case: bit.
@@ -670,7 +669,7 @@ have [kLwh|whLk] := ltnP (to_nat k) (nwidth * nhorizontal); last first.
     apply/idP => HH.
     have : to_nat k %/ nhorizontal < nwidth.
     apply: valid_pegs_get_border_width wbV3 _ => //.
-    rewrite ltn_divLR //; last by rewrite nhorizontalE.
+    rewrite ltn_divLR //; first by rewrite nhorizontalE.
     by rewrite ltnNge whLk.
   rewrite orFb.
   suff : bit (w3 lor b3) k = false by rewrite lor_spec; case: bit.
@@ -699,14 +698,14 @@ have [kLwh|whLk] := ltnP (to_nat k) (nwidth * nhorizontal); last first.
     apply/idP => HH.
     have : to_nat k %/ nhorizontal < nwidth.
     apply: valid_pegs_get_border_width w1b1V _ => //.
-    rewrite ltn_divLR //; last by rewrite nhorizontalE.
+    rewrite ltn_divLR //; first by rewrite nhorizontalE.
     by rewrite ltnNge whLk.
   rewrite lor_spec.
   have -> : bit (get_border w2 b2) k = false.
     apply/idP => HH.
     have : to_nat k %/ nhorizontal < nwidth.
     apply: valid_pegs_get_border_width w2b2V _ => //.
-    rewrite ltn_divLR //; last by rewrite nhorizontalE.
+    rewrite ltn_divLR //; first by rewrite nhorizontalE.
     by rewrite ltnNge whLk.
   have -> : bit w1 k = false.
     suff: bit (w1 lor b1) k = false by rewrite lor_spec; case: bit.
@@ -755,23 +754,22 @@ Lemma to_nat_hprimenS :
   to_nat (2 * (hprime / nhash + 1)) = (to_nat hprime %/ 2 ^ to_nat lhash).+1.*2.
 Proof.
 have Hc : to_nat (hprime / nhash + 1) = (to_nat hprime %/ 2 ^ to_nat lhash).+1.
-  rewrite to_nat_add; last first.
+  rewrite to_nat_add.
     apply: ltn_trans (_ : (to_nat (hprime / nhash)).*2 < _).
       rewrite -addnn ltn_add2l.
       have : 1 <? hprime /nhash by [].
       by move/nltbP.
-    rewrite nwB_pow -[ndigits]prednK; last by [].
+    rewrite nwB_pow -[ndigits]prednK; first by [].
     rewrite expnS mul2n ltn_double.
     have /nltbP : hprime / nhash <? lsl one (digits - 1) by [].
     rewrite to_nat_lsl_one; last first.
       by rewrite to_nat_sub // ndigitsLwB.
     by rewrite to_nat_sub ?ndigitsLwB.
-  rewrite addn1 to_nat_div to_nat_lsl_one; last by [].
-  by congr (_.+1).
-rewrite to_nat_mul Hc; last first.
-  rewrite nwB_pow  -[ndigits]prednK; last by [].
+  by rewrite addn1 to_nat_div to_nat_lsl_one.
+rewrite to_nat_mul Hc.
+  rewrite nwB_pow  -[ndigits]prednK; first by [].
   rewrite expnS ltn_mul2l andTb.
-  rewrite -[ndigits.-1]prednK; last by [].
+  rewrite -[ndigits.-1]prednK; first by [].
   rewrite expnS mul2n.
   apply: ltn_trans (_ : (to_nat hprime %/ 2 ^ to_nat lhash).*2 < _).
     rewrite -addnn -[X in X < _]addn1 ltn_add2l.
@@ -780,7 +778,7 @@ rewrite to_nat_mul Hc; last first.
   rewrite ltn_double.
   have /nltbP : hprime / nhash <? lsl one (digits - 2) by [].
   rewrite to_nat_div to_nat_lsl_one; last by [].
-  rewrite to_nat_sub; last 2 first.
+  rewrite to_nat_sub.
   - by [].
   - by apply: ndigitsLwB.
   by rewrite subn2.
@@ -811,17 +809,17 @@ Lemma to_nat_nhprimelhS c :
     (to_nat (c mod hprime) %/ 2 ^ to_nat lhash).*2.+1.
 Proof.
 move=> cLwh.
-rewrite to_nat_add; first by rewrite addn1 to_nat_nhprimelh.
-rewrite addn1 to_nat_nhprimelh; last by [].
+rewrite to_nat_add; last by rewrite addn1 to_nat_nhprimelh.
+rewrite addn1 to_nat_nhprimelh; first by [].
 have [->|chNE0]:= (to_nat (c mod hprime)  %/ 2 ^ to_nat lhash =P 0)%N.
   by rewrite nwB_pow (@ltn_exp2l 2 0).
 apply: leq_ltn_trans (leq_succ_double _ _) _.
   by case: (_ %/ _) chNE0.
-rewrite nwB_pow -[ndigits]prednK; last by [].
+rewrite nwB_pow -[ndigits]prednK; first by [].
 rewrite expnS mul2n ltn_double.
-rewrite -[ndigits.-1]prednK; last by [].
+rewrite -[ndigits.-1]prednK; first by [].
 rewrite expnS mul2n ltn_double.
-rewrite ltn_divLR; last by rewrite expn_gt0.
+rewrite ltn_divLR; first by rewrite expn_gt0.
 rewrite -expnD to_nat_mod.
 apply: leq_ltn_trans (leq_mod _ _) _.
 apply: leq_trans cLwh _.
@@ -852,7 +850,7 @@ apply: (@make_hash_get u x y).
   apply/nltbP.
   by rewrite to_nat_mhash [X in _ < X]to_nat_lsl_one ?ltn_pmod.
 apply/nltbP.
-rewrite to_nat_hprimenS to_nat_nhprimelhS; last by apply: get_code_bound.
+rewrite to_nat_hprimenS to_nat_nhprimelhS; first by apply: get_code_bound.
 by rewrite doubleS !ltnS leq_double leq_div2r // to_nat_mod ltnW // ltn_pmod.
 Qed.
 
@@ -879,7 +877,7 @@ rewrite /hput; case: ifP => _.
   set yy1 := (X in _.[_ <- X]).
   case : (xx1 =P i) => [->|iDxx1]; last first.
     by rewrite [ht1.[_<-_].[_]]get_set_other.
-  rewrite [ht1.[_<-_].[_]]get_set_same; last by rewrite Hh.
+  rewrite [ht1.[_<-_].[_]]get_set_same; first by rewrite Hh.
   rewrite /yy1.
   set ht2 := ht1.[_].
   set ht3 := ht2.[_ <- _].
@@ -893,13 +891,13 @@ rewrite /hput; case: ifP => _.
   rewrite /ht2; set v := _ land _.
   apply: (Hi v i) => //.
   apply/nltbP.
-  rewrite [X in _ < X]to_nat_lsl_one; last by [].
+  rewrite [X in _ < X]to_nat_lsl_one; first by [].
   by rewrite to_nat_mhash ltn_pmod.
 set xx1 := (X in _.[X <- _]).
 set yy1 := (X in _.[_ <- X]).
 case : (xx1 =P i) => [->|iDxx1]; last first.
   by rewrite [ht1.[_<-_].[_]]get_set_other.
-rewrite [ht1.[_<-_].[_]]get_set_same; last by rewrite Hh.
+rewrite [ht1.[_<-_].[_]]get_set_same; first by rewrite Hh.
 rewrite /yy1.
 set ht2 := ht1.[_].
 set xx2 := (X in ht2.[X <- _]).
@@ -908,7 +906,7 @@ rewrite (length_set _ ht2 xx2 yy2).
 rewrite /ht2; set v := _ land _.
 apply: (Hi v) => //.
 apply/nltbP.
-rewrite [X in _ < X]to_nat_lsl_one; last by [].
+rewrite [X in _ < X]to_nat_lsl_one; first by [].
 by rewrite to_nat_mhash ltn_pmod.
 Qed.
 
@@ -937,30 +935,30 @@ Proof.
 move=> wbV wbA wbE [l1htE l2htE hV].
 split; first by rewrite length1_hput.
   move=> i iLn; rewrite length2_hput //.
-    by apply: l2htE.
-  by move=> i1 j1 i1Ln j1Ln; rewrite l2htE // l2htE.
+    by move=> i1 j1 i1Ln j1Ln; rewrite l2htE // l2htE.
+  by apply: l2htE.
 move=> w1 b1 h1 w1b1V w1b1A.
 have gclmE : get_code w b h >> slocksize land lockmask = 
               get_code w b h >> slocksize.
-  apply: bit_ext => i; rewrite land_spec bit_decr; last by [].
+  apply: bit_ext => i; rewrite land_spec bit_decr; first by [].
   rewrite bit_lsr.
   case: nlebP => iLsi; last by [].
   case: nltbP; first by rewrite andbT.
   move=> /negP; rewrite -leqNgt andbF => lLi.
   apply/sym_equal/(bit_false_lt _ _ _ _ (get_code_bound _ wbV)).
-  rewrite to_nat_add_le. 
+  rewrite to_nat_add_le; last first. 
     by rewrite to_nat_slocksize addnC -leq_subLR leq_sub2l.
-  apply/nlebP; rewrite add_comm to_nat_add_le; first by apply: leq_addl.
+  apply/nlebP; rewrite add_comm to_nat_add_le; last by apply: leq_addl.
   by rewrite add_comm; apply/nlebP.
 have sLs : to_nat s < 2 ^ nscoresize by apply: eval_score_bound wbE.
 rewrite /valid_entries /hput /hget.
 set c1 := get_code _ _ _ mod _; set c2 := get_code _ _ _ mod _.
 have c1lE :
     to_nat (2 * c1 >> lhash) = (to_nat c1 %/ 2 ^ to_nat lhash).*2.
-  by rewrite to_nat_nhprimelh; [|apply: get_code_bound].
+  by rewrite to_nat_nhprimelh; [apply: get_code_bound|].
 have c2lE :
     to_nat (2 * c2 >> lhash) = (to_nat c2 %/ 2 ^ to_nat lhash).*2.
-  by rewrite to_nat_nhprimelh; [|apply: get_code_bound].
+  by rewrite to_nat_nhprimelh; [apply: get_code_bound|].
 have c1lSE :
     to_nat (2 * c1 >> lhash + 1) = (to_nat c1 %/ 2 ^ to_nat lhash).*2.+1.
   by apply: to_nat_nhprimelhS; apply: get_code_bound.
@@ -981,9 +979,9 @@ have tclDtclDs c c' :
     2 * (c mod hprime) >> lhash != 2 * (c' mod hprime) >> lhash + 1.
   move=> cB c'B; apply/eqP => H.
   suff : odd (to_nat (2 * (c' mod hprime) >> lhash + 1)).
-    rewrite -H to_nat_nhprimelh; last by apply: cB.
+    rewrite -H to_nat_nhprimelh; first by apply: cB.
     by rewrite odd_double.
-  rewrite to_nat_nhprimelhS; last by apply: c'B.
+  rewrite to_nat_nhprimelhS; first by apply: c'B.
   by rewrite oddS odd_double.
 have tc1lDtc2lDs : 2 * c1 >> lhash != 2 * c2 >> lhash + 1.
   by apply: tclDtclDs; apply: get_code_bound.
@@ -995,7 +993,7 @@ have tc2lDtc2lDs : 2 * c2 >> lhash != 2 * c2 >> lhash + 1.
   by apply: tclDtclDs; apply: get_code_bound.
 rewrite {tclDtclDs}.
 have c2mLn : to_nat (c2 land mhash) < to_nat nhash.
-  rewrite land_power2; last by [].
+  rewrite land_power2; first by [].
   by rewrite to_nat_mod ltn_pmod.
 have evalE : (c1 land mhash = c2 land mhash) -> c1 >> lhash = c2 >> lhash ->
          get_code w b h >> slocksize = get_code w1 b1 h1 >> slocksize ->
@@ -1019,8 +1017,8 @@ have evalE : (c1 land mhash = c2 land mhash) -> c1 >> lhash = c2 >> lhash ->
     by rewrite [to_nat c1]to_nat_mod [to_nat c2]to_nat_mod.
   have x1hm2mEx2hm2m : (x1 %% to_nat hprime) %% m2 = (x2 %% to_nat hprime) %% m2.
     have : to_nat (c1 land mhash) = to_nat (c2 land mhash) by congr (to_nat _).
-    rewrite land_power2; last by [].
-    rewrite land_power2; last by [].
+    rewrite land_power2; first by [].
+    rewrite land_power2; first by [].
     rewrite to_nat_mod [to_nat c1]to_nat_mod -/x1 to_nat_mod.
     by rewrite [to_nat c2]to_nat_mod -/x2 to_nat_lsl_one.
   have x1hEx2h : x1 = x2 %[mod to_nat hprime].
@@ -1030,20 +1028,20 @@ have evalE : (c1 land mhash = c2 land mhash) -> c1 >> lhash = c2 >> lhash ->
     by rewrite (divn_eq x1 m1) x1m1Ex2m1 x1m1Ex2m1m -divn_eq.
   have m1Lhp :  m1 < to_nat hprime by [].
   rewrite (divn_eq x1 m1) (divn_eq x2 m1) x1m1Ex2m1 in x1hEx2h.
-  move/eqP: x1hEx2h; rewrite eqn_modDl modn_small; last first.
+  move/eqP: x1hEx2h; rewrite eqn_modDl modn_small.
     by apply: ltn_trans (ltn_pmod _ _) m1Lhp; rewrite expn_gt0.
-  rewrite [_ %% _ %% _]modn_small; last first.
+  rewrite [_ %% _ %% _]modn_small.
     by apply: ltn_trans (ltn_pmod _ _) m1Lhp; rewrite expn_gt0.
   by move=> /eqP.
 set o := (_ =? _) || _.
 have [oT|oF] := ifP o.
   have [cx1mEc2m|cx1mDc2m] := (c1 land mhash) =P (c2 land mhash); last first.
-    rewrite [ht.[_ <- _].[_]]get_set_other; last by [].
+    rewrite [ht.[_ <- _].[_]]get_set_other; first by [].
     by have := hV w1 b1 h1 w1b1V w1b1A.
   rewrite cx1mEc2m.
-  rewrite [ht.[_ <- _].[_]]get_set_same; last by rewrite l1htE; apply/nltbP.
+  rewrite [ht.[_ <- _].[_]]get_set_same; first by rewrite l1htE; apply/nltbP.
   set u1 := ht.[_].[_ <- _].
-  rewrite [u1.[_ <- _].[_]]get_set_other; last by apply/eqP; rewrite eq_sym.
+  rewrite [u1.[_ <- _].[_]]get_set_other; first by apply/eqP; rewrite eq_sym.
   have [cx1lEc2l|/eqP cx1lDc2l] := c1 >> lhash =P c2 >> lhash; last first.
     have tc1lE : to_nat (2 * c1 >> lhash) = (to_nat (c1 >> lhash)).*2.
       by rewrite c1lE to_nat_lsr.
@@ -1052,39 +1050,39 @@ have [oT|oF] := ifP o.
     have tc1lDtc2l : 2 * c1 >> lhash != 2 * c2 >> lhash.
       apply/eqP => HH; case/eqP: cx1lDc2l.
       apply/to_nat_inj/double_inj.
-      rewrite -!mul2n -[2%N]/(to_nat 2) -to_nat_mul ?HH.
+      rewrite -!mul2n -[2%N]/(to_nat 2) -to_nat_mul ?HH; last first.
         by rewrite tc2lE mul2n.
-      rewrite mul2n to_nat_lsr nwB_pow -[ndigits]prednK; last by [].
-      rewrite expnS mul2n ltn_double ltn_divLR; last by [].
+      rewrite mul2n to_nat_lsr nwB_pow -[ndigits]prednK; first by [].
+      rewrite expnS mul2n ltn_double ltn_divLR; first by [].
       rewrite -expnD to_nat_mod.
       apply: leq_ltn_trans (leq_mod _ _) _.
       apply: ltn_trans (get_code_bound _ wbV) _.
       by rewrite ltn_exp2l // (ltn_trans wh_hyp).
     have tc2lSDtc2lS : 2 * c1 >> lhash + 1 != 2 * c2 >> lhash + 1.
       by apply/eqP => HH; case/eqP: tc1lDtc2l; rewrite -[LHS](addK _ 1) HH addK.
-    rewrite /u1 [_.[_ <- _].[2 * (lsr c2 lhash)]]get_set_other; last by apply/eqP.
-    rewrite [_.[_ <- _].[_ + 1]]get_set_other; last by apply/eqP.
-    rewrite [_.[_ <- _].[_ + 1]]get_set_other; last by apply/eqP.
+    rewrite /u1 [_.[_ <- _].[2 * (lsr c2 lhash)]]get_set_other; first by apply/eqP.
+    rewrite [_.[_ <- _].[_ + 1]]get_set_other; first by apply/eqP.
+    rewrite [_.[_ <- _].[_ + 1]]get_set_other; first by apply/eqP.
     by have := hV w1 b1 h1 w1b1V w1b1A.
   rewrite /u1 cx1lEc2l.
-  rewrite [_.[_<-_].[2 * c2 >> lhash]]get_set_same; last first.
+  rewrite [_.[_<-_].[2 * c2 >> lhash]]get_set_same.
     apply/nltbP; rewrite c2lE.
-    rewrite l2htE; last by apply/nltbP/c2mLn.
+    rewrite l2htE; first by apply/nltbP/c2mLn.
     rewrite to_nat_hprimenS ltn_double ltnS.
     apply: leq_div2r.
     rewrite to_nat_mod; apply/ltnW/ltn_pmod.
     by have /nltbP: 0 <? hprime by [].
-  rewrite [_.[_<-_].[2 * c2 >> lhash + 1]]get_set_same; last first.
+  rewrite [_.[_<-_].[2 * c2 >> lhash + 1]]get_set_same.
     set v := _ land _; set v1 := _ * _; set v2 := _ lor _.
     rewrite (length_set _ ht.[v] v1 v2).
-    rewrite l2htE; last by apply/nltbP.
-    apply/nltbP; rewrite to_nat_hprimenS.
+    rewrite l2htE; first by apply/nltbP.
+   apply/nltbP; rewrite to_nat_hprimenS.
     rewrite c2lSE doubleS 2!ltnS leq_double.
     apply: leq_div2r.
     rewrite to_nat_mod; apply/ltnW/ltn_pmod.
     by have /nltbP: 0 <? hprime by [].
   set v := lsr _ scorelocksize; have -> : v = s.
-    rewrite /v lsr_lor lsl_lsr_le; last 2 first.
+    rewrite /v lsr_lor lsl_lsr_le.
     - apply: ltn_trans (_ : 2 ^  nscoresize * 2 ^ to_nat scorelocksize < _).
         by rewrite ltn_mul2r expn_gt0.
       by rewrite -expnD nwB_pow ltn_exp2l.
@@ -1092,9 +1090,9 @@ have [oT|oF] := ifP o.
     have -> : scorelocksize - scorelocksize = 0 by ring.
     rewrite lsl0_r lsr_land_distr.
     by rewrite land0_r lor0_r. 
-  rewrite land_lor_distrl lsl_land_decr; last by [].
+  rewrite land_lor_distrl lsl_land_decr; first by [].
   rewrite lor0 gclmE.
-  rewrite land_lor_distrl /scorelocksize add_comm lsl_add_distl; last first.
+  rewrite land_lor_distrl /scorelocksize add_comm lsl_add_distl.
     apply: ltn_trans (_ : 2 ^ 5 < _); first by [].
     by rewrite nwB_pow ltn_exp2l.
   apply/andP; split.
@@ -1103,11 +1101,11 @@ have [oT|oF] := ifP o.
     rewrite /valid_eval.
     suff -> : eval w1 b1 = eval w b by [].
     by apply: evalE.
-  rewrite lsl_land_decr; last by [].
+  rewrite lsl_land_decr; first by [].
   rewrite lor0 -landA.
   rewrite lsr_lor land_lor_distrl.
-  rewrite lsl_lsr_le; last 2 first.
-  - rewrite  to_nat_lslW modn_small.
+  rewrite lsl_lsr_le.
+  - rewrite  to_nat_lslW modn_small; last first.
       rewrite -mulnA -expnD nwB_pow.
       have -> : ndigits = ((ndigits - (to_nat scoresize + to_nat locksize)) +
                           (to_nat scoresize + to_nat locksize))%N by apply: refl_equal.
@@ -1117,7 +1115,7 @@ have [oT|oF] := ifP o.
       by rewrite ltn_mul2r expn_gt0.
     by rewrite -expnD nwB_pow ltn_exp2l.
   - by [].
-  rewrite lsl0_r lsl_land_decr; last by [].
+  rewrite lsl0_r lsl_land_decr; first by [].
   rewrite lor0.
   have -> : scorelockmask land lockmask = lockmask by [].
   rewrite lsl_land_distr -landA.
@@ -1125,10 +1123,10 @@ have [oT|oF] := ifP o.
     by apply: bit_ext => i; rewrite bit_decr.
   by have /andP[] := hV w1 b1 h1 w1b1V w1b1A.
 have [cx1mEc2m|/eqP cx1mDc2m] := (c1 land mhash) =P (c2 land mhash); last first.
-  rewrite [ht.[_ <- _].[_]]get_set_other; last by apply/eqP.
+  rewrite [ht.[_ <- _].[_]]get_set_other; first by apply/eqP.
   by have := hV w1 b1 h1 w1b1V w1b1A.
 rewrite cx1mEc2m.
-rewrite [ht.[_ <- _].[_]]get_set_same; last by rewrite l1htE; apply/nltbP.
+rewrite [ht.[_ <- _].[_]]get_set_same; first by rewrite l1htE; apply/nltbP.
 set u1 := ht.[_].[_ <- _].
 have [cx1lEc2l|/eqP cx1lDc2l] := c1 >> lhash =P c2 >> lhash; last first.
   have tc1lE : to_nat (2 * c1 >> lhash) = (to_nat (c1 >> lhash)).*2.
@@ -1138,10 +1136,10 @@ have [cx1lEc2l|/eqP cx1lDc2l] := c1 >> lhash =P c2 >> lhash; last first.
   have tc1lDtc2l : 2 * c1 >> lhash != 2 * c2 >> lhash.
     apply/eqP => HH; case/eqP: cx1lDc2l.
     apply/to_nat_inj/double_inj.
-    rewrite -!mul2n -[2%N]/(to_nat 2) -to_nat_mul ?HH.
+    rewrite -!mul2n -[2%N]/(to_nat 2) -to_nat_mul ?HH; last first.
       by rewrite tc2lE mul2n.
-    rewrite mul2n to_nat_lsr nwB_pow -[ndigits]prednK; last by [].
-    rewrite expnS mul2n ltn_double ltn_divLR; last by [].
+    rewrite mul2n to_nat_lsr nwB_pow -[ndigits]prednK; first by [].
+    rewrite expnS mul2n ltn_double ltn_divLR; first by [].
     rewrite -expnD to_nat_mod.
     apply: leq_ltn_trans (leq_mod _ _) _.
     apply: ltn_trans (get_code_bound _ wbV) _.
@@ -1149,17 +1147,17 @@ have [cx1lEc2l|/eqP cx1lDc2l] := c1 >> lhash =P c2 >> lhash; last first.
   have tc1lDtc2lS : 2 * c1 >> lhash + 1 != 2 * c2 >> lhash  + 1.
     apply/eqP=> HH; case/eqP: tc1lDtc2l.
     by rewrite -(addK (2 * c1 >> lhash ) 1) HH addK.
-  rewrite /u1 [_.[_ <- _].[2 * c2 >> lhash]]get_set_other; last first.
+  rewrite /u1 [_.[_ <- _].[2 * c2 >> lhash]]get_set_other.
     by apply/eqP; rewrite eq_sym.
-  rewrite [ht.[_].[_ <- _].[2 * c2 >> lhash + 1]]get_set_other; last first.
+  rewrite [ht.[_].[_ <- _].[2 * c2 >> lhash + 1]]get_set_other.
     by apply/eqP.
   by have := hV w1 b1 h1 w1b1V w1b1A.
 rewrite /u1 cx1lEc2l.
-rewrite [_.[_<-_].[2 * c2 >> lhash]]get_set_other; last first.
+rewrite [_.[_<-_].[2 * c2 >> lhash]]get_set_other.
   by apply/eqP; rewrite eq_sym.
-rewrite [_.[_<-_].[2 * c2 >> lhash + 1]]get_set_same; last first.
+rewrite [_.[_<-_].[2 * c2 >> lhash + 1]]get_set_same.
   apply/nltbP.
-  rewrite c2lSE l2htE; last by apply/nltbP.
+  rewrite c2lSE l2htE; first by apply/nltbP.
   rewrite to_nat_hprimenS.
   rewrite doubleS 2!ltnS leq_double.
   apply: leq_div2r.
@@ -1172,7 +1170,7 @@ have sskLwb : to_nat slocksize + to_nat scorelocksize < nwB.
   rewrite to_nat_slocksize to_nat_scorelocksize addnA.
   have [|lLwh] := leqP (nwidth * nhorizontal) (to_nat locksize).
     by rewrite -subn_eq0 => /eqP->; rewrite add0n (ltn_trans _ ndigitsLwB).
-  rewrite subnK //; last by apply: ltnW.
+  rewrite subnK //; first by apply: ltnW.
   rewrite (leq_ltn_trans _ (_ : ndigits + to_nat scoresize < _)) //.
     by rewrite leq_add2r ltnW.
   apply: ltn_trans (_ : 2 ^ 10 < _); first by [].
@@ -1194,43 +1192,43 @@ have -> : v2 = v1.
     by rewrite addnA subnK // -addn1 leq_add2l.
   rewrite lor0_r lsl_lor lsr_lor.
   have -> : (lsl s locksize) >> scorelocksize = 0.
-    rewrite lsl_lsr_ge; last by [].
-      have -> : scorelocksize - locksize = scoresize by [].
+    rewrite lsl_lsr_ge; first last.
+    - have -> : scorelocksize - locksize = scoresize by [].
       apply: to_nat_inj; rewrite to_nat_lsr.
       by apply: divn_small.
+    - by [].
     apply: ltn_trans (_ : 2 ^ to_nat scoresize * 2 ^ to_nat locksize < _).
       by rewrite ltn_mul2r expn_gt0.
     by rewrite -expnD nwB_pow ltn_exp2l.
-  rewrite lor0_r -lsl_add_distl; last first.
+  rewrite lor0_r -lsl_add_distl.
     apply: ltn_trans (_ : 2 ^ 6 < _); first by [].
     by rewrite nwB_pow ltn_exp2l.
   have <- : scorelocksize = scoresize + locksize by [].
-  rewrite lsl_lsr_ge; last 2 first.
+  rewrite lsl_lsr_ge.
   - rewrite to_nat_lsr nwB_pow.
-    rewrite -[ndigits](@subnK (to_nat scorelocksize)); last by [].
-    rewrite [X in _ < X]expnD ltn_mul2r expn_gt0 ltn_divLR; last first.
+    rewrite -[ndigits](@subnK (to_nat scorelocksize)); first by [].
+    rewrite [X in _ < X]expnD ltn_mul2r expn_gt0 ltn_divLR.
       by apply: expn_gt0.
-    rewrite -expnD subnK; last by [].
+    rewrite -expnD subnK; first by [].
     by rewrite -nwB_pow; apply: to_nat_bounded.
   - by [].
   rewrite lsr_0_r.
   have -> : scorelocksize = locksize + scoresize by [].
-  rewrite lsr_add_distl; last first.
-    apply: ltn_trans (_ : 2 ^ 6 < _); first by [].
-    by rewrite nwB_pow ltn_exp2l.
-  by [].
+  rewrite lsr_add_distl; last by [].
+  apply: ltn_trans (_ : 2 ^ 6 < _); first by [].
+  by rewrite nwB_pow ltn_exp2l.
 rewrite {v2}/v1.
 apply/andP; split.
   by case/andP: (hV w1 b1 h1 w1b1V w1b1A).
-rewrite land_lor_distrl lsl_land_decr; last by [].
-rewrite lor0 lsr_lor -lsr_add_distl; last first.
+rewrite land_lor_distrl lsl_land_decr; first by [].
+rewrite lor0 lsr_lor -lsr_add_distl.
   apply: ltn_trans sskLwb.
   rewrite addnC ltn_add2l to_nat_scorelocksize.
   by rewrite -addn1 leq_add2l.
 have -> : get_code w b h >> (slocksize + locksize) = 0.
   apply: to_nat_inj; rewrite to_nat_lsr.
   apply: divn_small.
-  rewrite to_nat_add; last first.
+  rewrite to_nat_add.
     by apply: leq_ltn_trans sskLwb; rewrite leq_add2l.
   rewrite to_nat_slocksize.
   apply: leq_trans (get_code_bound _ _) _ => //.
@@ -1238,9 +1236,9 @@ have -> : get_code w b h >> (slocksize + locksize) = 0.
   have [lLwh|whLl] := leqP (to_nat locksize) (nwidth * nhorizontal); last first.
     by move/ltnW : (whLl); rewrite -subn_eq0 => /eqP->; rewrite add0n; apply/ltnW.
   by rewrite subnK.
-rewrite lor0_r lsl_lsr_ge; last 2 first.
+rewrite lor0_r lsl_lsr_ge.
 - rewrite nwB_pow.
-  rewrite -[ndigits](@subnK (to_nat locksize)); last by [].
+  rewrite -[ndigits](@subnK (to_nat locksize)); first by [].
   rewrite [X in _ < X]expnD ltn_mul2r expn_gt0 andTb.
   apply: ltn_bit => [|i nlLi]; first by [].
   rewrite !(bit_lsr, bit_lsl, lor_spec).
@@ -1249,28 +1247,28 @@ rewrite lor0_r lsl_lsr_ge; last 2 first.
     rewrite leqNgt in F.
     by case/negP : F.
   rewrite orFb => /negP; rewrite -leqNgt => sLi.
-  rewrite (bit_false_lt _ _ _ sLi); last by [].
+  rewrite (bit_false_lt _ _ _ sLi); first by [].
   rewrite orbF.
   case: nlebP => [//|/negP].
   rewrite -ltnNge => iLd.
   case: nlebP => [isLsis|//].
   apply: (bit_false_lt _ ndigits _ ); last first.
-     by rewrite -nwB_pow; apply: to_nat_bounded.
-  rewrite add_comm to_nat_add_le; last by rewrite add_comm; apply/nlebP.
-  rewrite to_nat_sub; last 2 first.
+    by rewrite -nwB_pow; apply: to_nat_bounded.
+  rewrite add_comm to_nat_add_le; first by rewrite add_comm; apply/nlebP.
+  rewrite to_nat_sub.
   - by [].
   - by apply: to_nat_bounded.
-  rewrite -addnABC => [|//|//].
+  rewrite -addnABC => [//|//|].
   have -> : (to_nat scorelocksize - to_nat scoresize = to_nat locksize)%N.
     by apply: refl_equal.
   by rewrite addnC -leq_subLR.
 - by [].
 rewrite gclmE.
-rewrite lsr_0_r land_lor_distrl lsl_land_decr; last by [].
+rewrite lsr_0_r land_lor_distrl lsl_land_decr; first by [].
 rewrite lor0.
 have -> : s land scoremask = s.
   apply: bit_ext => i.
-  rewrite land_spec bit_decr; last by [].
+  rewrite land_spec bit_decr; first by [].
   case: nltbP; first by rewrite andbT.
   move=> /negP; rewrite andbF -leqNgt => sLi.
   by apply/sym_equal; apply: bit_false_lt sLi _.

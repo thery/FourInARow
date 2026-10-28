@@ -61,8 +61,8 @@ A note about this development is available
 build: [make "-j%{jobs}%"]
 install: [make "install"]
 depends: [
-  "coq" {(>= "9.1")}
-  "rocq-mathcomp-ssreflect" {(>= "2.5.0")}
+  "coq" {(>= "9.2")}
+  "rocq-mathcomp-ssreflect" {(>= "2.6.0")}
 ]
 
 tags: [

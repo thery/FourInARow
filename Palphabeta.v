@@ -1,6 +1,6 @@
 From Stdlib Require Import ZArith Ascii List String PrimInt63.
 From Stdlib Require Import -(notations) PArray.
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 From HB Require Import structures.
 
 From Stdlib Require Import Lia.
@@ -37,46 +37,46 @@ Section  Alpha.
 
 
 Variables width height : int.
-Notation nhorizontal := (nhorizontal height).
-Notation nwidth := (nwidth width).
-Notation nheight := (nheight height).
+Abbreviation nhorizontal := (nhorizontal height).
+Abbreviation nwidth := (nwidth width).
+Abbreviation nheight := (nheight height).
 
 Hypothesis wh_hyp : nwidth * nhorizontal < ndigits.
 Hypothesis w_hyp : 3 < nwidth.
 Hypothesis h_hypL : 3 < nheight.
 Hypothesis h_hypU : nheight.+1 < ndigits.
 
-Notation slocksize := (slocksize width height).
+Abbreviation slocksize := (slocksize width height).
 
 Hypothesis h_hprime : 2 ^ to_nat slocksize < to_nat hprime. 
 
-Notation size := seq.size.
-Notation get_border := (get_border width height).
-Notation valid_pegs := (valid_pegs width height).
-Notation horizontal := (horizontal height).
-Notation get_column := (get_column height).
-Notation cell := (cell height).
-Notation eval := (eval width height).
-Notation evalOr := (evalOr wh_hyp h_hypU).
-Notation sym_code := (sym_code height).
-Notation nhorizontalLwB := (nhorizontalLwB height).
-Notation nwidthLwB := (nwidthLwB width).
-Notation transpose := (transpose width height).
-Notation get_code := (get_code width height).
-Notation hget := (hget width height).
-Notation get_columnE := (@get_columnE width height).
-Notation hput := (hput width height).
-Notation number_of_cells := (number_of_cells width height).
-Notation valid_eval := (valid_eval width height).
-Notation valid_pos := (valid_pos width height).
-Notation has_move := (has_move width height).
-Notation cwin := (cwin width height).
-Notation cmove := (cmove width height).
-Notation mk_move := (mk_move height).
-Notation ncells := (ncells width height).
-Notation valid_htable := (valid_htable width height).
-Notation ihjE := (@ihjE width height).
-Notation ihjLd := (@ihjLd width height).
+Abbreviation size := seq.size.
+Abbreviation get_border := (get_border width height).
+Abbreviation valid_pegs := (valid_pegs width height).
+Abbreviation horizontal := (horizontal height).
+Abbreviation get_column := (get_column height).
+Abbreviation cell := (cell height).
+Abbreviation eval := (eval width height).
+Abbreviation evalOr := (evalOr wh_hyp h_hypU).
+Abbreviation sym_code := (sym_code height).
+Abbreviation nhorizontalLwB := (nhorizontalLwB height).
+Abbreviation nwidthLwB := (nwidthLwB width).
+Abbreviation transpose := (transpose width height).
+Abbreviation get_code := (get_code width height).
+Abbreviation hget := (hget width height).
+Abbreviation get_columnE := (@get_columnE width height).
+Abbreviation hput := (hput width height).
+Abbreviation number_of_cells := (number_of_cells width height).
+Abbreviation valid_eval := (valid_eval width height).
+Abbreviation valid_pos := (valid_pos width height).
+Abbreviation has_move := (has_move width height).
+Abbreviation cwin := (cwin width height).
+Abbreviation cmove := (cmove width height).
+Abbreviation mk_move := (mk_move height).
+Abbreviation ncells := (ncells width height).
+Abbreviation valid_htable := (valid_htable width height).
+Abbreviation ihjE := (@ihjE width height).
+Abbreviation ihjLd := (@ihjLd width height).
 
 Notation "t .[ i ]" := (get t i)
   (at level 1, left associativity, format "t .[ i ]").
@@ -187,7 +187,7 @@ have iLw : i < nwidth by case/and3P: ijM.
 have jLh : j < nheight by case/and3P: ijM.
 rewrite /get_max.
 rewrite (bigD1 (Ordinal iLw)) //= [in RHS](bigD1 (Ordinal iLw)) //= !maxnA; congr maxn.
-  rewrite (bigD1 (Ordinal jLh)) //=; last first.
+  rewrite (bigD1 (Ordinal jLh)) //=.
     by rewrite ijM; move: msU => /= /andP[]; rewrite mmE => ->.
   rewrite maxnA; congr maxn; first by rewrite maxnC.
   apply: eq_bigl => k /=; rewrite -andbA; congr (_ && _).
@@ -199,8 +199,8 @@ rewrite (bigD1 (Ordinal iLw)) //= [in RHS](bigD1 (Ordinal iLw)) //= !maxnA; cong
   move/(congr1 (fun x => to_nat x)) : HH1 => /eqP HH2.
   have kLhe : k < nhorizontal by apply: ltn_trans (ltn_ord _) _; rewrite nhorizontalE.
   have jLhe : j < nhorizontal by apply: ltn_trans jLh _; rewrite nhorizontalE.
-  rewrite [X in X == _]to_nat_lsl_one ihjE // in HH2; last by apply: ihjLd.
-  rewrite [X in _ == X]to_nat_lsl_one ihjE // in HH2; last by apply: ihjLd.
+  rewrite [X in X == _]to_nat_lsl_one ihjE // in HH2; first by apply: ihjLd.
+  rewrite [X in _ == X]to_nat_lsl_one ihjE // in HH2; first by apply: ihjLd.
   rewrite eqn_exp2l // eqn_add2l in HH2 .
   by apply/eqP.
 apply: eq_bigr => i1 /eqP /val_eqP /= i1Di.
@@ -211,8 +211,8 @@ rewrite mmE; move/eqP: i1Di => i1Di; apply/eqP; contradict i1Di.
 move/(congr1 (fun x => to_nat x)) : i1Di => /eqP HH2.
 have j1Lhe : j1 < nhorizontal by apply: ltn_trans (ltn_ord _) _; rewrite nhorizontalE.
 have jLhe : j < nhorizontal by apply: ltn_trans jLh _; rewrite nhorizontalE.
-rewrite [X in X == _]to_nat_lsl_one ihjE // in HH2; last by apply: ihjLd.
-rewrite [X in _ == X]to_nat_lsl_one ihjE // in HH2; last by apply: ihjLd.
+rewrite [X in X == _]to_nat_lsl_one ihjE // in HH2; first by apply: ihjLd.
+rewrite [X in _ == X]to_nat_lsl_one ihjE // in HH2; first by apply: ihjLd.
 rewrite eqn_exp2l // in HH2.
 case: (ltngtP i1 i) => // [i1Li | iLi1].
   suff : i1 * nhorizontal + j1 < i * nhorizontal + j by rewrite (eqP HH2) ltnn.
@@ -293,7 +293,7 @@ Proof.
 move => ijM.
 have iLw : i < nwidth by case/and3P: ijM.
 have jLh : j < nheight by case/and3P: ijM.
-rewrite [X in _ <= X]evalS //= (negPf wNw) (negPf wNb) ifT; last first.
+rewrite [X in _ <= X]evalS //= (negPf wNw) (negPf wNb) ifT.
   by apply: cmove_has_move ijM.
 rewrite (bigD1 (Ordinal iLw)) //= (leq_trans  _ (leq_maxl _ _)) //.
 by rewrite (bigD1 (Ordinal jLh)) //= leq_maxl.
@@ -338,7 +338,7 @@ Proof.
 case => ->; case => -> //; case; case => -> //; case; case => -> //.
 Qed.
 
-Notation process := (process width height w b beta lv hg hs ab).
+Abbreviation process := (process width height w b beta lv hg hs ab).
 
 Lemma process_correct ms alpha sc sc1 v v1 ht ht1 :
   valid_answer sc -> valid_list ms -> valid_scores ms sc ->
@@ -552,7 +552,7 @@ Qed.
 
 End Process.
 
-Notation alpha_beta := (alpha_beta width height).
+Abbreviation alpha_beta := (alpha_beta width height).
 
 Lemma alphabeta_correct ns h w b (alpha beta : int) v ht sc v1 ht1 : 
   ncells (w lor b) < ns ->
@@ -710,7 +710,7 @@ apply: process_correct => //.
 by apply: find_moves_moves_uniq E.
 Qed.
 
-Notation is_won := (is_won height).
+Abbreviation is_won := (is_won height).
 
 Definition valid_posb w b := 
   [&& (w lor b) >> (width * horizontal) == 0, ~~ is_won w, ~~ is_won b, 
@@ -732,16 +732,16 @@ apply/andP; split.
   rewrite -leqNgt => whLi.
   rewrite (bit_false_lt _ _ _ whLi) // in Hb.
   rewrite -[X in _ < X]mul1n.
-  rewrite -ltn_divLR //; last by rewrite expn_gt0.
+  rewrite -ltn_divLR //; first by rewrite expn_gt0.
   have : to_nat 0 = 0%N by [].
   by rewrite -wbswh_eq0 to_nat_lsr => ->.
 apply/forallP => i; apply/implyP => /nltbP iLw.
-rewrite opzsE; last by apply/nltbP/(ltn_trans _ h_hypU).
+rewrite opzsE; first by apply/nltbP/(ltn_trans _ h_hypU).
 have := HiE (to_nat i).
 rewrite mem_iota => /(_ iLw) /hasP[j Hj1 Hj2].
 rewrite mem_iota /= add0n in Hj1.
 apply/existsP; exists (of_nat j); apply/andP; split.
-  apply/nlebP; rewrite of_natK //; last first.
+  apply/nlebP; rewrite of_natK //.
     by apply: ltn_trans nhorizontalLwB.
   by rewrite -ltnS -nhorizontalE.
 by rewrite to_natK in Hj2.
@@ -770,7 +770,7 @@ move=> wbVb; apply: htopeval_correct => //.
 by apply: valid_htable_make_hash.
 Qed.
 
-Notation parse_string := (parse_string width height).
+Abbreviation parse_string := (parse_string width height).
 
 Definition get_position s :=
    match parse_string s with
