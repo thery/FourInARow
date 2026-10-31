@@ -41,8 +41,8 @@ Definition eb2 :=  (get_position 7 6 ev2).2.
 
 Lemma eval_ev2E : top_eval76 ew2 eb2 = win.
 Proof.
-(*
 native_cast_no_check (refl_equal win).
+(*
 Time Qed.
 *)
 Admitted.

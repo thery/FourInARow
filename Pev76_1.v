@@ -40,11 +40,11 @@ Definition ew1 :=  (get_position 7 6 ev1).1.
 Definition eb1 :=  (get_position 7 6 ev1).2.
 
 Lemma eval_ev1E : top_eval76 ew1 eb1 = win.
-(*
 Proof.
 native_cast_no_check (refl_equal win).
+(*
 Time Qed.
-*) 
+*)
 Admitted.
 
 

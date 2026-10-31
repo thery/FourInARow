@@ -40,8 +40,8 @@ Definition eb4 :=  (get_position 7 6 ev4).2.
 
 Lemma eval_ev4E : top_eval76 ew4 eb4 = win.
 Proof.
-(*
 native_cast_no_check (refl_equal win).
+(*
 Time Qed.
 *)
 Admitted.

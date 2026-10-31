@@ -40,8 +40,8 @@ Definition eb3 :=  (get_position 7 6 ev3).2.
 
 Lemma eval_ev3E : top_eval76 ew3 eb3 = win.
 Proof.
-(*
 native_cast_no_check (refl_equal win).
+(*
 Time Qed.
 *)
 Admitted.

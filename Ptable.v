@@ -78,7 +78,7 @@ native_cast_no_check (refl_equal draw).
 (*
 Time Qed.
 *)
-Admitted. 
+Admitted.
 
 Lemma eval_ev5x4 : eval 5 4 0 0 = DRAW.
 Proof.
@@ -184,7 +184,7 @@ native_cast_no_check (refl_equal draw).
 (*
 Time Qed.
 *)
-Admitted. 
+Admitted.
 
 Lemma eval_ev7x4 : eval 7 4 0 0 = DRAW.
 Proof.
