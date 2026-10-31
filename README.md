@@ -14,12 +14,18 @@ Follow the instructions on https://github.com/coq-community/templates to regener
 
 Four-In-a-Row in Rocq
 
-The heavy computation are disabled by default. To enable them :
+The heavy computations are disabled by default. To enable them:
+
+```shell
 make qed      # the 23 Admitted become Qed
 make          # build; this time the long computations are checked
+```
 
-To disable them :
+To disable them:
+
+```shell
 make admit    # back to Admitted before you commit
+```
 
 | File                              |  Content                                 | 
 | --------------------------------- | -----------------------------------------| 
