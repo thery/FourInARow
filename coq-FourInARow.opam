@@ -5,9 +5,9 @@ opam-version: "2.0"
 maintainer: "thery@sophia.inria.fr"
 version: "dev"
 
-homepage: "https://github.com/thery/fiar"
-dev-repo: "git+https://github.com/thery/fiar.git"
-bug-reports: "https://github.com/thery/fiar/issues"
+homepage: "https://github.com/thery/FourInARow"
+dev-repo: "git+https://github.com/thery/FourInARow.git"
+bug-reports: "https://github.com/thery/FourInARow/issues"
 license: "MIT"
 
 synopsis: "Four In A Row in Rocq"
